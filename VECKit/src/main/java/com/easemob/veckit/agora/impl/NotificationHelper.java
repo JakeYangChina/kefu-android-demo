@@ -1,4 +1,4 @@
-package com.hyphenate.helpdesk.easeui.agora.impl;
+package com.easemob.veckit.agora.impl;
 
 import android.annotation.TargetApi;
 import android.app.Notification;
@@ -6,7 +6,8 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.os.Build;
-import android.support.annotation.RequiresApi;
+
+import androidx.annotation.RequiresApi;
 
 
 public class NotificationHelper {

@@ -1,4 +1,5 @@
-package com.hyphenate.helpdesk.easeui.agora.impl;
+package com.easemob.veckit.agora.impl;
+
 
 import io.agora.rtc.mediaio.IVideoFrameConsumer;
 import io.agora.rtc.mediaio.IVideoSource;

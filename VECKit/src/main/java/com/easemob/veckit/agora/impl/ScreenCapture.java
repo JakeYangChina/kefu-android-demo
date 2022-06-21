@@ -1,4 +1,4 @@
-package com.hyphenate.helpdesk.easeui.agora.impl;
+package com.easemob.veckit.agora.impl;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -18,11 +18,12 @@ import android.util.Log;
 import android.view.Surface;
 import android.view.Window;
 
-import com.hyphenate.helpdesk.easeui.agora.gles.GLRender;
-import com.hyphenate.helpdesk.easeui.agora.gles.GlUtil;
-import com.hyphenate.helpdesk.easeui.agora.gles.ImgTexFormat;
-import com.hyphenate.helpdesk.easeui.agora.gles.ImgTexFrame;
-import com.hyphenate.helpdesk.easeui.agora.gles.SrcConnector;
+
+import com.easemob.veckit.agora.gles.GLRender;
+import com.easemob.veckit.agora.gles.GlUtil;
+import com.easemob.veckit.agora.gles.ImgTexFormat;
+import com.easemob.veckit.agora.gles.ImgTexFrame;
+import com.easemob.veckit.agora.gles.SrcConnector;
 
 import java.lang.ref.WeakReference;
 import java.util.Locale;
