@@ -3,7 +3,6 @@ package com.hyphenate.helpdesk.easeui.ui;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
-import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.TypedValue;
@@ -11,6 +10,8 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import androidx.annotation.Nullable;
 
 import com.hyphenate.helpdesk.R;
 
@@ -67,7 +68,6 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
         clear();
-        mDataList = null;
     }
 
     private void clear(){
@@ -100,6 +100,32 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
             addView(createView(iconData));
         }
 
+    }
+
+    public void setCustomItemState(int index, boolean isSelect){
+        ViewIconData data = mDataList.get(index);
+        data.mState = isSelect;
+        if (isSelect){
+            data.mTextView.setText(data.mDefaultIcon);
+            data.mTextView.setTextColor(Color.parseColor(data.mDefaultIconColor));
+        }else {
+            data.mTextView.setText(data.mPressIcon);
+            data.mTextView.setTextColor(Color.parseColor(data.mPressIconColor));
+        }
+    }
+
+    public void setCustomItemColor(int index, String color){
+        ViewIconData data = mDataList.get(index);
+        data.mTextView.setTextColor(Color.parseColor(color));
+    }
+
+    public void setCustomItemIcon(int index, String icon){
+        ViewIconData data = mDataList.get(index);
+        data.mTextView.setText(icon);
+    }
+
+    public View getIconView(int index){
+        return mDataList.get(index).mTextView;
     }
 
     private View createView(ViewIconData iconData){
@@ -148,30 +174,41 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
         if (tag instanceof ViewIconData){
             ViewIconData data = (ViewIconData) tag;
             if (mListener != null){
-                if(!data.mState){
-                    // press
-                    data.mTextView.setText(data.mPressIcon);
+                if (!data.mIsCustomState){
+
+                    data.mState = !data.mState;
                     if (!data.mIsClickState){
-                        data.mTextView.setTextColor(Color.parseColor(data.mPressIconColor));
+                        data.mTextView.setText(data.mState ? data.getDefaultIcon() : data.getPressIcon());
+                        data.mTextView.setTextColor(data.mState ? Color.parseColor(data.mDefaultIconColor) : Color.parseColor(data.mPressIconColor));
                     }
 
+                    boolean b = mListener.onPressStateChange(data.mIndex, data.mState, data.mIsCustomState);
+                    // mIsClickState点击事件false，选中true
+                    if (!data.mIsClickState){
+                        if (!b){
+                            // 还原状态
+                            data.mState = !data.mState;
+                            data.mTextView.setText(data.mState ? data.mDefaultIcon : data.getPressIcon());
+                            data.mTextView.setTextColor(data.mState ? Color.parseColor(data.getDefaultIconColor()) : Color.parseColor(data.mPressIconColor));
+                        }
+                    }
                 }else {
-                    data.mTextView.setText(data.mDefaultIcon);
-                    if (!data.mIsClickState){
-                        data.mTextView.setTextColor(Color.parseColor(data.mDefaultIconColor));
-                    }
-                }
 
-                data.mState = !data.mState;
-                boolean b = mListener.onPressStateChange(data.mIndex, data.mState);
-                if (!data.mIsClickState){
+                    data.mState = !data.mState;
+                    if (!data.mIsClickState){
+                        data.mTextView.setText(data.mState ? data.getDefaultIcon() : data.getPressIcon());
+                        data.mTextView.setTextColor(data.mState ? Color.parseColor(data.mDefaultIconColor) : Color.parseColor(data.mPressIconColor));
+                    }
+
+                    boolean b = mListener.onPressStateChange(data.mIndex, data.mState, data.mIsCustomState);
                     if (!b){
                         // 还原状态
                         data.mState = !data.mState;
-                        data.mTextView.setText(data.mDefaultIcon);
-                        data.mTextView.setTextColor(data.mState ? Color.parseColor(data.mPressIconColor) : Color.parseColor(data.mDefaultIconColor));
+                        data.mTextView.setText(data.mState ? data.mDefaultIcon : data.getPressIcon());
+                        data.mTextView.setTextColor(data.mState ? Color.parseColor(data.mDefaultIconColor) : Color.parseColor(data.mPressIconColor));
                     }
                 }
+
             }
         }
     }
@@ -182,13 +219,25 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
     }
 
     public interface OnViewPressStateListener{
-        boolean onPressStateChange(int index, boolean isClick);
+        boolean onPressStateChange(int index, boolean isClick, boolean isCustomState);
     }
 
     public static class ViewIconData{
+        // 声音
+        public static final String TYPE_ITEM_VOICE = "voice";
+        // 相机
+        public static final String TYPE_ITEM_CAME = "camera";
+        // 电话
+        public static final String TYPE_ITEM_PHONE = "phone";
+        // 分享
+        public static final String TYPE_ITEM_SHARE = "share";
+        // 电子白板
+        public static final String TYPE_ITEM_FLAT = "flat";
+
         String mDefaultIcon = "";
         String mDefaultIconColor = "#000000";
         // 两种状态。点击和选中
+        // mIsClickState点击事件false，选中true
         boolean mIsClickState;
         String mPressIcon = "";
         String mPressIconColor = "#ff4400";
@@ -198,31 +247,44 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
 
         TextView mTextView;
 
-        public ViewIconData(String defaultIcon, String defaultIconColor, String pressIcon, String pressIconColor, boolean isClickState){
+        boolean mIsCustomState;
+
+        String mName;
+
+        public ViewIconData(String defaultIcon, String defaultIconColor, String pressIcon, String pressIconColor,
+                            boolean isClickState, String name){
             this.mDefaultIcon = defaultIcon;
             this.mPressIcon = pressIcon;
             this.mIsClickState = isClickState;
             this.mDefaultIconColor = defaultIconColor;
             this.mPressIconColor = pressIconColor;
+            this.mName = name;
         }
 
-        public ViewIconData(String defaultIcon, String defaultIconColor, String pressIcon, String pressIconColor){
-            this(defaultIcon, defaultIconColor, pressIcon, pressIconColor, false);
+        public ViewIconData(String defaultIcon, String defaultIconColor, String pressIcon, String pressIconColor, String name){
+            this(defaultIcon, defaultIconColor, pressIcon, pressIconColor, false, name);
         }
 
-        public ViewIconData(String defaultIcon, String defaultIconColor, String pressIcon, String pressIconColor, int textSize){
-            this(defaultIcon, defaultIconColor, pressIcon, pressIconColor, false);
-            this.mSize = textSize;
+        public ViewIconData(boolean isCustomState, String defaultIcon, String defaultIconColor, String pressIcon, String pressIconColor, String name){
+            this(defaultIcon, defaultIconColor, pressIcon, pressIconColor, false, name);
+            this.mIsCustomState = isCustomState;
         }
 
-        public ViewIconData(String defaultIcon, String defaultIconColor, String pressIcon, String pressIconColor, int textSize, boolean isClickState){
-            this(defaultIcon, defaultIconColor, pressIcon, pressIconColor, false);
-            this.mSize = textSize;
+        public ViewIconData(boolean isCustomState, String defaultIcon, String defaultIconColor, String pressIcon, String pressIconColor, boolean isClickState, String name){
+            this(defaultIcon, defaultIconColor, pressIcon, pressIconColor, false, name);
+            this.mIsCustomState = isCustomState;
             this.mIsClickState = isClickState;
         }
 
-        public ViewIconData(String defaultIcon, String pressIcon){
-            this(defaultIcon, "#000000", pressIcon, "#ff4400", false);
+        public ViewIconData(String defaultIcon, String defaultIconColor, String pressIcon, String pressIconColor, int textSize, String name){
+            this(defaultIcon, defaultIconColor, pressIcon, pressIconColor, false, name);
+            this.mSize = textSize;
+        }
+
+        public ViewIconData(String defaultIcon, String defaultIconColor, String pressIcon, String pressIconColor, int textSize, boolean isClickState, String name){
+            this(defaultIcon, defaultIconColor, pressIcon, pressIconColor, false, name);
+            this.mSize = textSize;
+            this.mIsClickState = isClickState;
         }
 
         // 默认单位sp
@@ -232,6 +294,34 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
 
         public int getIndex() {
             return mIndex;
+        }
+
+        public String getName() {
+            return mName;
+        }
+
+        public void onDestroy(){
+            mTextView = null;
+        }
+
+        public String getPressIcon() {
+            return mPressIcon;
+        }
+
+        public String getDefaultIcon() {
+            return mDefaultIcon;
+        }
+
+        public String getDefaultIconColor() {
+            return mDefaultIconColor;
+        }
+
+        public String getPressIconColor() {
+            return mPressIconColor;
+        }
+
+        public void setState(boolean state) {
+            mState = state;
         }
     }
 }

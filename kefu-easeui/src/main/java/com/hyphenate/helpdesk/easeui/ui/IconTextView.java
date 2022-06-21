@@ -4,7 +4,9 @@ import android.content.Context;
 import android.graphics.Typeface;
 import android.util.AttributeSet;
 
-public class IconTextView extends android.support.v7.widget.AppCompatTextView {
+import androidx.appcompat.widget.AppCompatTextView;
+
+public class IconTextView extends AppCompatTextView {
     public IconTextView(Context context) {
         this(context, null);
     }

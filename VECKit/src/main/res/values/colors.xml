@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="line_write">#F2F2F2</color>
+    <color name="dialog_corners_bg">#DD181818</color>
+    <color name="dialog_bg">#88A8A8A8</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="bottom_text_color">#66666666</color>
+    <color name="blue_color">#2189ff</color>
+
+    <color name="penRoyalBlue">#4169e1</color>
+
+    <color name="fast_light_mode_border_bg">#26000000</color>
+    <color name="fast_light_mode_bg">#F9F9F9</color>
+</resources>

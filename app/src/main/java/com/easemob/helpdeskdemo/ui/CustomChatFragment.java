@@ -1,25 +1,27 @@
 package com.easemob.helpdeskdemo.ui;
 
-import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentTransaction;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
-import android.widget.Toast;
+
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 
 import com.easemob.helpdeskdemo.R;
+import com.easemob.helpdeskdemo.service.VideoCallWindowService;
+import com.easemob.helpdeskdemo.utils.Calling;
 import com.easemob.helpdeskdemo.widget.chatrow.ChatRowEvaluation;
 import com.easemob.helpdeskdemo.widget.chatrow.ChatRowForm;
 import com.easemob.helpdeskdemo.widget.chatrow.ChatRowLocation;
 import com.easemob.helpdeskdemo.widget.chatrow.ChatRowOrder;
 import com.easemob.helpdeskdemo.widget.chatrow.ChatRowTrack;
 import com.hyphenate.EMCallBack;
+import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
 import com.hyphenate.chat.ChatManager;
 import com.hyphenate.chat.EMLocationMessageBody;
@@ -106,6 +108,10 @@ public class CustomChatFragment extends ChatFragment implements ChatFragment.Eas
         });
 //        ((Button)inputMenu.getButtonSend()).setBackgroundResource(R.color.top_bar_normal_bg);
 
+
+
+        Log.e("eeeeeeeeeee","发消息 =========================");
+        //Message.testCmd(AgoraMessage.newAgoraMessage().getCurrentChatUsername());
     }
 
 
@@ -213,6 +219,9 @@ public class CustomChatFragment extends ChatFragment implements ChatFragment.Eas
 
             case ITEM_VIDEO:
                 // TODO 这里简单处理下权限
+                // VideoCallWindowService.show(getContext());
+                // CallActivity.show(getContext());
+                Calling.callingRequest(getContext(), AgoraMessage.newAgoraMessage().getCurrentChatUsername());
                 startVideoCall();
                 break;
             case ITEM_EVALUATION:

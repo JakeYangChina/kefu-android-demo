@@ -1,0 +1,191 @@
+apply plugin: 'maven'
+apply plugin: 'signing'
+
+group = "com.easemob"
+version = project.sdkVersion//发布aar的库版本
+def projectName = 'kefu-sdk'
+def sdkVer = project.sdkVersion
+
+def repositoryId = project.stagingRepositoryId
+
+Properties properties = new Properties()
+properties.load(file('./project.properties').newDataInputStream())
+
+//指定singing的相关信息
+gradle.taskGraph.whenReady { taskGraph ->
+    if (taskGraph.allTasks.any { it instanceof Sign }) {
+        def id = properties.getProperty("signing.keyId")
+        def file = properties.getProperty("signing.secretKeyRingFile")
+        def password = properties.getProperty("signing.password")
+
+        println "key id: $id file: $file password: $password"
+        allprojects { ext."signing.keyId" = id }
+        allprojects { ext."signing.secretKeyRingFile" = file }
+        allprojects { ext."signing.password" = password }
+    }
+}
+
+//if (project.isAarRelease.toBoolean() && project.isLite.toBoolean()){
+//    projectName = 'kefu-sdk-lite'
+//}
+
+project.archivesBaseName = projectName
+
+configurations {
+    deployerJars
+}
+
+task deleteLib(type: Delete) {
+    delete 'libs/'
+}
+
+task copySo (type: Copy, dependsOn: deleteLib) {
+    from "imlibs/libs.lite"
+    into "libs/"
+}
+
+if(project.isAarRelease.toBoolean()){
+    preBuild.dependsOn 'clean', 'copySo'
+}
+
+task unZipAar {
+    doLast {
+        copy {
+            from zipTree("$buildDir/outputs/aar/$projectName-$sdkVer" + ".aar")
+            into "$buildDir/outputs/aar/release"
+        }
+        copy {
+            from zipTree("$buildDir/outputs/aar/release/classes.jar")
+            into "$buildDir/outputs/aar/release/classes"
+        }
+        copy {
+            from("imlibs/libs.lite/")
+            into "$buildDir/outputs/aar/release/libs/"
+            include "*.jar"
+            exclude "*.so"
+        }
+    }
+}
+
+task jarClasses(type: Jar, dependsOn: unZipAar){
+    from "$buildDir/outputs/aar/release/classes/"
+    destinationDir = file("$buildDir/outputs/aar/release/")
+    baseName 'classes'
+    version ''
+    if(project.isLite.toBoolean()){
+        exclude /*'com/hyphenate/chat/Call*', */'**/META-INF','com/hyphenate/chat/MediaStream*','com/hyphenate/chat/EMCall*','**/media'
+    }else{
+        exclude '**/META-INF'
+    }
+}
+
+task zipAar(type: Zip, dependsOn: jarClasses){
+    from "$buildDir/outputs/aar/release/"
+    destinationDir = file("$buildDir/outputs/aar/")
+    exclude "**/classes"
+    baseName projectName
+    version sdkVersion
+//    classifier 'release'
+    extension 'aar'
+}
+
+//android.sourceSets.main.java {
+//    if(project.isLite.toBoolean()){
+//        exclude 'com/hyphenate/chat/Call*','com/hyphnate/chat/Media*'
+//    }
+//}
+
+task sourcesJar(type: Jar){
+    from android.sourceSets.main.java.srcDirs
+    classifier = 'sources'
+}
+
+task javadoc(type: Javadoc){
+    options {
+        encoding 'UTF-8'
+        charSet 'UTF-8'
+    }
+    source = android.sourceSets.main.java.srcDirs
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+}
+
+javadoc {
+    options.showFromPublic()
+    exclude(["com/hyphenate/chat/CallManager.java"])
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc){
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives javadocJar
+    archives sourcesJar
+}
+
+signing {
+    required{ gradle.taskGraph.hasTask("zipAar") }
+    sign configurations.archives
+}
+
+if(project.isLite.toBoolean()){
+    signArchives.dependsOn 'zipAar'
+}
+
+nexusStaging {
+    packageGroup = "$group" //optional if packageGroup == project.getGroup()
+    stagingProfileId = "$group" //when not defined will be got from server using "packageGroup"
+    username = properties.getProperty("ossrhUsername")
+    password = properties.getProperty("ossrhPassword")
+    stagingRepositoryId = repositoryId //0.20.0版本以后支持
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                authentication(userName: properties.getProperty("ossrhUsername"), password: properties.getProperty("ossrhPassword"))
+            }
+
+            snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+                authentication(userName: properties.getProperty("ossrhUsername"), password: properties.getProperty("ossrhPassword"))
+            }
+
+            pom.project {
+                //version version
+                name "$archivesBaseName"
+                packaging 'aar'
+                // optionally artifactId can be defined here
+                //println "current groupId:$group"
+                //groupId group
+                //artifactId archivesBaseName
+                description 'With kefu-sdk, we can quickly and easily implement the customer service visitor side.'
+                url 'https://github.com/easemob/kefu-sdk-android'
+
+                scm {
+                    connection 'scm:git@github.com:easemob/kefu-sdk-android.git'
+                    developerConnection 'scm:git@github.com:easemob/kefu-sdk-android.git'
+                    url 'https://github.com/easemob/kefu-sdk-android.git'
+                }
+
+                licenses {
+                    license {
+                        name 'The Apache License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'shanjingheng'
+                        name 'Sean'
+                        email 'shanjingheng@sohu.com'
+                    }
+                }
+            }
+        }
+    }
+}

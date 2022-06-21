@@ -26,6 +26,7 @@ import com.easemob.helpdeskdemo.DemoMessageHelper;
 import com.easemob.helpdeskdemo.HMSPushHelper;
 import com.easemob.helpdeskdemo.Preferences;
 import com.easemob.helpdeskdemo.R;
+import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
 import com.hyphenate.chat.Conversation;
 import com.hyphenate.helpdesk.Error;
@@ -199,12 +200,13 @@ public class LoginActivity extends DemoBaseActivity {
 				}
 				Bundle bundle = new Bundle();
 				bundle.putInt(Constant.INTENT_CODE_IMG_SELECTED_KEY, selectedIndex);
-			 //设置点击通知栏跳转事件
+			 	//设置点击通知栏跳转事件
 				Conversation conversation = ChatClient.getInstance().chatManager().getConversation(Preferences.getInstance().getCustomerAccount());
 				String titleName = null;
 				if (conversation.officialAccount() != null){
 					titleName = conversation.officialAccount().getName();
 				}
+				AgoraMessage.newAgoraMessage().setCurrentChatUsername(Preferences.getInstance().getCustomerAccount());
 				// 进入主页面
 				Intent intent = new IntentBuilder(LoginActivity.this)
 						.setTargetClass(ChatActivity.class)

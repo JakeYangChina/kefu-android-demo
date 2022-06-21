@@ -3,31 +3,24 @@ package com.hyphenate.helpdesk.easeui.agora;
 
 import android.content.Context;
 import android.os.Handler;
-import android.os.Looper;
-import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.SurfaceView;
+import android.view.TextureView;
 import android.view.View;
-import android.view.WindowManager;
 
-
-import com.hyphenate.agora.IAgoraRtcEngineEventHandler;
-
-import java.lang.reflect.Field;
+import com.hyphenate.helpdesk.util.Log;
 
 import io.agora.rtc.Constants;
 import io.agora.rtc.IRtcEngineEventHandler;
+import io.agora.rtc.IRtcEngineEventHandlerEx;
 import io.agora.rtc.RtcEngine;
+import io.agora.rtc.ScreenCaptureParameters;
+import io.agora.rtc.mediaio.AgoraDefaultSource;
 import io.agora.rtc.models.ChannelMediaOptions;
+import io.agora.rtc.ss.ScreenSharingClient;
 import io.agora.rtc.video.VideoCanvas;
 import io.agora.rtc.video.VideoEncoderConfiguration;
 import io.agora.rtc.video.WatermarkOptions;
 
-import static io.agora.rtc.video.VideoEncoderConfiguration.FRAME_RATE.FRAME_RATE_FPS_15;
-import static io.agora.rtc.video.VideoEncoderConfiguration.ORIENTATION_MODE.ORIENTATION_MODE_ADAPTIVE;
-import static io.agora.rtc.video.VideoEncoderConfiguration.ORIENTATION_MODE.ORIENTATION_MODE_FIXED_LANDSCAPE;
-import static io.agora.rtc.video.VideoEncoderConfiguration.ORIENTATION_MODE.ORIENTATION_MODE_FIXED_PORTRAIT;
-import static io.agora.rtc.video.VideoEncoderConfiguration.VD_640x360;
 
 
 public class AgoraRtcEngine {
@@ -48,16 +41,14 @@ public class AgoraRtcEngine {
     private WatermarkOptions mOptions;
     private VideoEncoderConfiguration.VideoDimensions mVideoEncodingDimension;
     private IRtcEngineEventHandler mEngineEventHandler;
-    private IAgoraRtcEngineEventHandler mHandler;
 
-    private AgoraRtcEngine(Context context, String appId, IAgoraRtcEngineEventHandler handler,
+    private AgoraRtcEngine(Context context, String appId, IRtcEngineEventHandler handler,
                            int profile, int role, VideoEncoderConfiguration config,
                            String watermarkUrl, WatermarkOptions options, VideoEncoderConfiguration.VideoDimensions videoEncodingDimension,
                            int renderMode, int mirrorMode){
         if (handler == null){
             throw new RuntimeException("IAgoraRtcEngineEventHandler is null.");
         }
-        this.mHandler = handler;
         this.mContext = context;
         this.renderMode = renderMode;
         this.mirrorMode = mirrorMode;
@@ -79,75 +70,39 @@ public class AgoraRtcEngine {
 
 
         if(videoEncodingDimension == null){
-            this.mVideoEncodingDimension = VD_640x360;
+            this.mVideoEncodingDimension = VideoEncoderConfiguration.VD_640x360;
         }else {
             this.mVideoEncodingDimension = videoEncodingDimension;
         }
+
+        mEngineEventHandler = handler;
         try {
-            mEngineEventHandler = new IRtcEngineEventHandler() {
-                @Override
-                // 监听频道内的远端主播，获取主播的 uid 信息。
-                public void onUserJoined(int uid, int elapsed) {
-                    if (mHandler == null){
-                        return;
-                    }
-                    mHandler.onUserJoined(uid, elapsed);
-                }
-
-                // 加入频道回调
-                @Override
-                public void onJoinChannelSuccess(String channel, int uid, int elapsed) {
-                    super.onJoinChannelSuccess(channel, uid, elapsed);
-                    if (mHandler == null){
-                        return;
-                    }
-                    mHandler.onJoinChannelSuccess(channel, uid, elapsed);
-                }
-
-                // 离开频道回调
-                @Override
-                public void onLeaveChannel(RtcStats stats) {
-                    super.onLeaveChannel(stats);
-                    if (mHandler == null){
-                        return;
-                    }
-                    mHandler.onLeaveChannel(new com.hyphenate.agora.RtcStats(
-                            stats.totalDuration, stats.txBytes, stats.rxBytes,
-                            stats.txAudioBytes, stats.txVideoBytes, stats.rxAudioBytes,
-                            stats.rxVideoBytes, stats.txKBitRate, stats.rxKBitRate,
-                            stats.txAudioKBitRate, stats.rxAudioKBitRate, stats.txVideoKBitRate,
-                            stats.rxVideoKBitRate, stats.users, stats.lastmileDelay,
-                            stats.txPacketLossRate, stats.rxPacketLossRate, stats.cpuTotalUsage,
-                            stats.cpuAppUsage, stats.gatewayRtt, stats.memoryAppUsageRatio,
-                            stats.memoryTotalUsageRatio, stats.memoryAppUsageInKbytes
-                    ));
-                }
-
-                @Override
-                public void onUserOffline(int uid, int reason) {
-                    super.onUserOffline(uid, reason);
-                    if (mHandler == null){
-                        return;
-                    }
-                    mHandler.onUserOffline(uid, reason);
-                }
-
-                @Override
-                public void onWarning(int warn) {
-                }
-
-                @Override
-                public void onError(int err) {
-                }
-            };
-
+            // // reason：5 --> 远端用户禁用 6 --> 远端用户恢复
             mEngine = RtcEngine.create(context.getApplicationContext(), appId, mEngineEventHandler);
-
         } catch (Exception e) {
             e.printStackTrace();
         }
+
     }
 
+    public void startScreenCapture(){
+        ScreenCaptureParameters screenCaptureParameters = new ScreenCaptureParameters();
+        //screenCaptureParameters.captureAudio = true;
+        screenCaptureParameters.captureVideo = true;
+        ScreenCaptureParameters.VideoCaptureParameters videoCaptureParameters = new ScreenCaptureParameters.VideoCaptureParameters();
+        screenCaptureParameters.videoCaptureParameters = videoCaptureParameters;
+
+        mEngine.startScreenCapture(screenCaptureParameters);
+    }
+
+    public void stopScreenCapture(){
+        mEngine.setVideoSource(new AgoraDefaultSource());
+        mEngine.stopScreenCapture();
+    }
+
+    public RtcEngine getEngine(){
+        return mEngine;
+    }
 
     /**
      * 创建 RendererView
@@ -157,6 +112,10 @@ public class AgoraRtcEngine {
      */
     public SurfaceView createRendererView(){
         return RtcEngine.CreateRendererView(mContext.getApplicationContext());
+    }
+
+    public TextureView createTextureView(){
+        return RtcEngine.CreateTextureView(mContext.getApplicationContext());
     }
 
     /**
@@ -199,7 +158,6 @@ public class AgoraRtcEngine {
         mEngine.setChannelProfile(mProfile);
         mEngine.setClientRole(mRole);
         mEngine.enableVideo();
-
         mEngine.setVideoEncoderConfiguration(mConfig);
 
         if (mOptions != null){
@@ -264,7 +222,7 @@ public class AgoraRtcEngine {
     }
 
     private VideoEncoderConfiguration.VideoDimensions getVideoEncodingDimensionObject() {
-        return VD_640x360;
+        return VideoEncoderConfiguration.VD_640x360;
     }
 
     /**
@@ -550,13 +508,6 @@ public class AgoraRtcEngine {
     }
 
 
-    // 分享桌面
-    public void shareWindows(ScreenSharingClient client, Context context, String appId, String token, String channelName, int uid, VideoEncoderConfiguration configurations){
-        client.start(context, appId, token,
-                channelName, uid, configurations);
-    }
-
-
     public static AgoraRtcEngineConfigure builder(){
         return new AgoraRtcEngineConfigure();
     }
@@ -579,14 +530,13 @@ public class AgoraRtcEngine {
         }
 
         mEngineEventHandler = null;
-        mHandler = null;
         mContext = null;
     }
 
     public static class AgoraRtcEngineConfigure{
         private int mProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING;
         private int mRole;
-        private int renderMode = VideoCanvas.RENDER_MODE_HIDDEN;
+        private int renderMode = VideoCanvas.RENDER_MODE_FIT;
         private int mirrorMode = 0;
 
         private VideoEncoderConfiguration mConfig;
@@ -594,7 +544,7 @@ public class AgoraRtcEngine {
         private WatermarkOptions mOptions;
         private VideoEncoderConfiguration.VideoDimensions mVideoEncodingDimension;
 
-        public AgoraRtcEngine build(Context context, String appId, IAgoraRtcEngineEventHandler handler){
+        public AgoraRtcEngine build(Context context, String appId, IRtcEngineEventHandler handler){
             return new AgoraRtcEngine(context, appId, handler, mProfile, mRole, mConfig,
                     mWatermarkUrl, mOptions, mVideoEncodingDimension, renderMode, mirrorMode);
         }

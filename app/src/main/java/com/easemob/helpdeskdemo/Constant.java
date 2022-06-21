@@ -22,6 +22,7 @@ public class Constant {
 	public static final String CHANNEL = "huanxin";
 	public static final int UID = 0;
 
+
 	public static final String DEFAULT_CUSTOMER_APPKEY = "1400171218061390#kefuchannelapp387";
 	public static final String DEFAULT_CUSTOMER_ACCOUNT = "kefuchannelimid_742962";
 	public static final String DEFAULT_ACCOUNT_PWD = "123456";

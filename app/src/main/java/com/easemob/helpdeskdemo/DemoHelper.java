@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.text.TextUtils;
+import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -12,34 +13,30 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.request.RequestOptions;
 import com.easemob.helpdeskdemo.receiver.CallReceiver;
-import com.easemob.helpdeskdemo.ui.CallActivity;
 import com.easemob.helpdeskdemo.ui.ChatActivity;
 import com.easemob.helpdeskdemo.utils.ListenerManager;
+import com.heytap.msp.push.HeytapPushManager;
 import com.hyphenate.chat.ChatClient;
 import com.hyphenate.chat.ChatManager;
 import com.hyphenate.chat.Conversation;
-import com.hyphenate.chat.EMClient;
 import com.hyphenate.chat.EMCmdMessageBody;
-import com.hyphenate.chat.EMTextMessageBody;
 import com.hyphenate.chat.Message;
 import com.hyphenate.chat.OfficialAccount;
-import com.hyphenate.helpdesk.easeui.Constant;
+import com.hyphenate.exceptions.HyphenateException;
 import com.hyphenate.helpdesk.easeui.Notifier;
 import com.hyphenate.helpdesk.easeui.UIProvider;
 import com.hyphenate.helpdesk.easeui.util.CommonUtils;
 import com.hyphenate.helpdesk.easeui.util.IntentBuilder;
 import com.hyphenate.helpdesk.model.AgentInfo;
 import com.hyphenate.helpdesk.model.MessageHelper;
-import com.hyphenate.helpdesk.util.Log;
 import com.hyphenate.push.EMPushConfig;
-import com.heytap.mcssdk.PushManager;
 import com.hyphenate.push.EMPushHelper;
 import com.hyphenate.push.EMPushType;
-import com.hyphenate.util.EMLog;
 
 import org.json.JSONObject;
 
 import java.util.List;
+
 
 public class DemoHelper {
 
@@ -59,9 +56,10 @@ public class DemoHelper {
 
     private UIProvider _uiProvider;
 
-    public boolean isVideoCalling;
     private CallReceiver callReceiver;
     private Context appContext;
+
+    public static int sNavHeight;
 
     private DemoHelper(){}
     public synchronized static DemoHelper getInstance() {
@@ -78,6 +76,7 @@ public class DemoHelper {
         ChatClient.Options options = new ChatClient.Options();
         options.setAppkey(Preferences.getInstance().getAppKey());
         options.setTenantId(Preferences.getInstance().getTenantId());
+        options.setConfigId(Preferences.getInstance().getConfigId());
         options.showAgentInputState().showVisitorWaitCount().showMessagePredict();
 
         // 你需要设置自己申请的账号来使用三方推送功能，详见集成文档
@@ -98,8 +97,7 @@ public class DemoHelper {
 //	    options.setUse2channel(true);
 //        options.setAutoLogin(false);
 
-        options.setAppVersion("1.3.1");
-
+        options.setAppVersion("1.3.2.4");
         // 环信客服 SDK 初始化, 初始化成功后再调用环信下面的内容
         if (ChatClient.getInstance().init(context, options)){
             _uiProvider = UIProvider.getInstance();
@@ -111,7 +109,6 @@ public class DemoHelper {
             setGlobalListeners();
 
         }
-
 
     }
 
@@ -212,24 +209,28 @@ public class DemoHelper {
             @Override
             public Intent getLaunchIntent(Message message) {
                 Intent intent;
-                if (isVideoCalling){
-                    intent = new Intent(context, CallActivity.class);
-                }else{
-                    //设置点击通知栏跳转事件
-                    Conversation conversation = ChatClient.getInstance().chatManager().getConversation(message.from());
-                    String titleName = null;
-                    if (conversation.officialAccount() != null){
-                        titleName = conversation.officialAccount().getName();
+                try {
+                    String type = message.getStringAttribute("type");
+                    if ("agorartcmedia/video".equalsIgnoreCase(type)){
+                        return null;
                     }
-                    intent = new IntentBuilder(context)
-                            .setTargetClass(ChatActivity.class)
-                            .setServiceIMNumber(conversation.conversationId())
-                            .setVisitorInfo(DemoMessageHelper.createVisitorInfo())
-                            .setTitleName(titleName)
-                            .setShowUserNick(true)
-                            .build();
-
+                } catch (HyphenateException e) {
+                    e.printStackTrace();
                 }
+
+                //设置点击通知栏跳转事件
+                Conversation conversation = ChatClient.getInstance().chatManager().getConversation(message.from());
+                String titleName = null;
+                if (conversation.officialAccount() != null){
+                    titleName = conversation.officialAccount().getName();
+                }
+                intent = new IntentBuilder(context)
+                        .setTargetClass(ChatActivity.class)
+                        .setServiceIMNumber(conversation.conversationId())
+                        .setVisitorInfo(DemoMessageHelper.createVisitorInfo())
+                        .setTitleName(titleName)
+                        .setShowUserNick(true)
+                        .build();
                 return intent;
             }
         });
@@ -326,6 +327,11 @@ public class DemoHelper {
             public void onMessage(List<Message> msgs) {
                 for (Message message : msgs){
                     Log.d(TAG, "onMessageReceived id : " + message.messageId());
+                    try {
+                        Log.d(TAG, "onMessageReceived id : " + message.getStringAttribute("weichat"));
+                    } catch (HyphenateException e) {
+                        e.printStackTrace();
+                    }
                     //这里全局监听通知类消息,通知类消息是通过普通消息的扩展实现
                     if (MessageHelper.isNotificationMessage(message)){
                         // 检测是否为留言的通知消息
@@ -337,6 +343,7 @@ public class DemoHelper {
                                 try{
                                     jsonTicket = message.getJSONObjectAttribute("weichat").getJSONObject("event").getJSONObject("ticket");
                                 }catch (Exception ignored){}
+
                                 ListenerManager.getInstance().sendBroadCast(eventName, jsonTicket);
                             }
                         }
@@ -412,8 +419,8 @@ public class DemoHelper {
     public void showNotificationPermissionDialog() {
         EMPushType pushType = EMPushHelper.getInstance().getPushType();
         // oppo
-        if(pushType == EMPushType.OPPOPUSH && PushManager.isSupportPush(appContext)) {
-            PushManager.getInstance().requestNotificationPermission();
+        if(pushType == EMPushType.OPPOPUSH && HeytapPushManager.isSupportPush(appContext)) {
+            HeytapPushManager.requestNotificationPermission();
         }
     }
 }

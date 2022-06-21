@@ -93,8 +93,11 @@
 -keep interface com.huawei.android.hms.agent.common.INoProguard {*;}
 -keep class * extends com.huawei.android.hms.agent.common.INoProguard {*;}
 
-# 声网
+# 音视频 声网
 -keep class io.agora.**{*;}
+
+-dontwarn com.tencent.bugly.**
+-keep public class com.tencent.bugly.**{*;}
 
 
 

@@ -21,7 +21,6 @@ public class LauncherActivity extends Activity {
 			return;
 		}
 		setContentView(R.layout.activity_launcher);
-
 		mHandler.postDelayed(new Runnable() {
 			@Override
 			public void run() {
@@ -29,5 +28,10 @@ public class LauncherActivity extends Activity {
 				LauncherActivity.this.finish();
 			}
 		}, AUTO_DELAY_MILLIS);
+
+		/*Intent intent = new Intent(this, CloudActivity.class);
+		startActivityForResult(intent, CloudActivity.UPLOAD_REQUEST);
+		finish();*/
+
 	}
 }

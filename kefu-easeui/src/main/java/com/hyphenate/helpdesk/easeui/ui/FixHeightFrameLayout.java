@@ -3,16 +3,19 @@ package com.hyphenate.helpdesk.easeui.ui;
 import android.animation.Animator;
 import android.animation.ObjectAnimator;
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 
 public class FixHeightFrameLayout extends FrameLayout implements Animator.AnimatorListener {
 
     private ObjectAnimator mAnimator;
+    private long mTime = 300;
 
     public FixHeightFrameLayout(@NonNull Context context) {
         this(context, null);
@@ -24,6 +27,7 @@ public class FixHeightFrameLayout extends FrameLayout implements Animator.Animat
 
     public FixHeightFrameLayout(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        setClickable(true);
     }
 
     private int mHeight;
@@ -36,19 +40,25 @@ public class FixHeightFrameLayout extends FrameLayout implements Animator.Animat
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int width = MeasureSpec.getSize(widthMeasureSpec);
         int height = MeasureSpec.getSize(heightMeasureSpec);
-        int widthMode = MeasureSpec.getMode(widthMeasureSpec);
-        int heightMode = MeasureSpec.getMode(heightMeasureSpec);
         if (!mIsGetHeight){
             mHeight = height;
-            mHalfHeight = mHeight / 2;
+            // 16 : 9
+            // height = width * 9 / 16;
+            // mHalfHeight = width * 9 / 16;
+            if (mFirstHalf){
+                mHalfHeight = mHeight / 2;
+            }
         }
 
-        if (mFirstHalf && !mIsRunAnimator){
-            setMeasuredDimension(MeasureSpec.makeMeasureSpec(width, widthMode), MeasureSpec.makeMeasureSpec(mHalfHeight, heightMode));
-        }
-
+        /*if (mFirstHalf && !mIsRunAnimator){
+            super.onMeasure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(mHalfHeight, MeasureSpec.EXACTLY));
+        }*/
+        /*if (!mIsRunAnimator){
+            Log.e("ffffffffff","mHalfHeight = "+mHalfHeight);
+            mHalfHeight = mHeight - mExtHeight;
+            setMeasuredDimension(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(mHalfHeight, MeasureSpec.EXACTLY));
+        }*/
     }
-
 
 
     @Override
@@ -68,10 +78,22 @@ public class FixHeightFrameLayout extends FrameLayout implements Animator.Animat
         }
     }
 
-    public void setDefaultShowHeight(boolean isHalf){
-        if (mFirstHalf != isHalf){
-            this.mFirstHalf = isHalf;
+    private int mExtHeight;
+    public void setDefaultShowHeight(int extHeight){
+        if (mExtHeight != extHeight){
+            mExtHeight = extHeight;
             requestLayout();
+            mHalfHeight = mHeight - mExtHeight;
+        }
+    }
+
+    public void setDefaultShowHeight(){
+        mFirstHalf = true;
+        if (mHalfHeight == 0){
+            requestLayout();
+            if (mHalfHeight == 0){
+                mHalfHeight = mHeight / 2;
+            }
         }
     }
 
@@ -86,29 +108,35 @@ public class FixHeightFrameLayout extends FrameLayout implements Animator.Animat
             mAnimator.removeListener(this);
             mAnimator = null;
         }
+        mCloseFlatCallback = null;
     }
 
     private boolean mIsRunAnimator;
+    private boolean mIsRunFull = true;
     public void showHalfHeight(){
-        if (mAnimator != null && !mIsRunAnimator && !mFirstHalf){
+        if (mAnimator != null && !mIsRunAnimator){
+            mIsRunFull = false;
             if (mAnimator.isRunning()){
                 mAnimator.cancel();
             }
-            mFirstHalf = true;
+
             mAnimator.setIntValues(mHeight, mHalfHeight);
-            mAnimator.setDuration(400);
+            mAnimator.setDuration(mTime);
             mAnimator.start();
         }
+    }
 
+    public boolean isFullScreen(){
+        return mIsRunFull;
     }
 
     public void showFullHeight(){
-        if (mAnimator != null && !mIsRunAnimator && mFirstHalf){
+        if (mAnimator != null && !mIsRunAnimator){
+            mIsRunFull = true;
             if (mAnimator.isRunning()){
                 mAnimator.cancel();
             }
-            mFirstHalf = false;
-            mAnimator.setDuration(400);
+            mAnimator.setDuration(mTime);
             mAnimator.setIntValues(mHalfHeight, mHeight);
             mAnimator.start();
         }
@@ -122,6 +150,54 @@ public class FixHeightFrameLayout extends FrameLayout implements Animator.Animat
         }
     }
 
+    public void setCloseFlatCallback(ICloseFlatCallback closeFlatCallback){
+        mCloseFlatCallback = closeFlatCallback;
+    }
+
+    private ICloseFlatCallback mCloseFlatCallback;
+    private boolean mIsRunCloseFlat;
+    public void closeFlat() {
+        if (mAnimator != null &&  mAnimator.isRunning()){
+            return;
+        }
+
+        if (mIsRunFull){
+            mIsRunAnimator = false;
+            mIsRunCloseFlat = false;
+            if (mCloseFlatCallback != null){
+                mCloseFlatCallback.closeFlat(mIsRunFull);
+            }
+            return;
+        }
+
+
+        mIsRunCloseFlat = true;
+        ViewGroup.LayoutParams layoutParams = getLayoutParams();
+        int currentHeight = layoutParams.height;
+        if (layoutParams.height == mHalfHeight){
+            if (mAnimator !=null){
+                if (mAnimator.isRunning()){
+                    mAnimator.cancel();
+                }
+            }
+            if (mCloseFlatCallback != null){
+                mCloseFlatCallback.closeFlat(mIsRunFull);
+            }
+            mIsRunCloseFlat = false;
+        }else {
+            if (mAnimator !=null){
+                if (mAnimator.isRunning()){
+                    mAnimator.cancel();
+                }
+                mAnimator.setDuration(mTime);
+                mAnimator.setIntValues(currentHeight, mHalfHeight);
+                mAnimator.start();
+            }
+        }
+    }
+
+
+
     @Override
     public void onAnimationStart(Animator animation) {
         mIsRunAnimator = true;
@@ -130,15 +206,32 @@ public class FixHeightFrameLayout extends FrameLayout implements Animator.Animat
     @Override
     public void onAnimationEnd(Animator animation) {
         mIsRunAnimator = false;
+        if (mIsRunCloseFlat){
+            mIsRunCloseFlat = false;
+            if (mCloseFlatCallback != null){
+                mCloseFlatCallback.closeFlat(mIsRunFull);
+            }
+
+        }else {
+            if (mCloseFlatCallback != null){
+                mCloseFlatCallback.onFullScreenCompleted(mIsRunFull);
+            }
+        }
     }
 
     @Override
     public void onAnimationCancel(Animator animation) {
         mIsRunAnimator = false;
+        mIsRunCloseFlat = false;
     }
 
     @Override
     public void onAnimationRepeat(Animator animation) {
 
+    }
+
+    public interface ICloseFlatCallback{
+        void closeFlat(boolean isFullScreen);
+        void onFullScreenCompleted(boolean isFullScreen);
     }
 }

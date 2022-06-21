@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:orientation="vertical"
+	android:gravity="center_horizontal"
               android:layout_width="match_parent"
               android:layout_height="match_parent">
 
@@ -70,5 +71,17 @@
 			android:background="@drawable/arrow_status_black_right"
 			/>
 	</RelativeLayout>
+
+	<Button
+		android:visibility="gone"
+		android:id="@+id/btn_transfer"
+		android:layout_width="wrap_content"
+		android:layout_height="40dip"
+		android:paddingLeft="20dip"
+		android:paddingRight="20dip"
+		android:textSize="16sp"
+		android:background="@drawable/hd_bg_button_satisfaction"
+		android:textColor="@android:color/black"
+		android:text="@string/transfertocs" />
 
 </LinearLayout>

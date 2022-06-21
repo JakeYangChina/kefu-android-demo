@@ -31,12 +31,21 @@ buildscript {
 
 allprojects {
     repositories {
+        maven { url 'https://jitpack.io' }
         mavenCentral()
         maven {url 'https://dl.google.com/dl/android/maven2/'}
         maven {url 'http://developer.huawei.com/repo'}
 
         google()
         jcenter()
+    }
+
+    configurations.all {
+        resolutionStrategy {
+            force 'androidx.appcompat:appcompat:1.2.0'
+            force 'com.google.code.gson:gson:2.8.5'
+            force 'androidx.recyclerview:recyclerview:1.1.0'
+        }
     }
 }
 

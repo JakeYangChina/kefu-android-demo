@@ -12,6 +12,7 @@ public class Preferences {
 	static private Preferences instance = null;
 	static private String PREFERENCE_NAME = "info";
 	static private String KEY_APPKEY = "appkey";
+	static private String KEY_CONFIG_ID = "configId";
 	static private String KEY_CUSTOMER_ACCOUNT = "customer_account";
 	static private String KEY_NICKNAME = "nickname";
 	static private String KEY_TENANT_ID = "tenantId";
@@ -61,6 +62,15 @@ public class Preferences {
         editor.commit();
     	
     }
+
+	public void setConfigId(String configId){
+		editor.putString(KEY_CONFIG_ID, configId);
+		editor.commit();
+	}
+
+	public String getConfigId(){
+		return pref.getString(KEY_CONFIG_ID, "");
+	}
     
     public String getCustomerAccount(){
     	return pref.getString(KEY_CUSTOMER_ACCOUNT, Constant.DEFAULT_CUSTOMER_ACCOUNT);
