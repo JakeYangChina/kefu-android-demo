@@ -87,6 +87,20 @@ public abstract class BaseActivity extends Activity {
         }
 
         if (!isShow && view.getVisibility() == View.VISIBLE){
+            view.setVisibility(View.GONE);
+        }
+    }
+
+    public void showAndHiddenInvisible(View view, boolean isShow){
+        if (view == null){
+            return;
+        }
+
+        if (isShow && view.getVisibility() != View.VISIBLE){
+            view.setVisibility(View.VISIBLE);
+        }
+
+        if (!isShow && view.getVisibility() == View.VISIBLE){
             view.setVisibility(View.INVISIBLE);
         }
     }
@@ -119,6 +133,13 @@ public abstract class BaseActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (mHandler != null){
+            mHandler.removeCallbacksAndMessages(null);
+            mHandler = null;
+        }
+    }
+
+    public void removeHandlerAll(){
         if (mHandler != null){
             mHandler.removeCallbacksAndMessages(null);
             mHandler = null;

@@ -44,6 +44,7 @@
     <string name="pop_after_sales">After_Sales</string>
     <!-- demo -->
     <string name="register_user_fail">register user failed!</string>
+    <string name="userName">login name</string>
 
     <string name="leave_title">Note</string>
     <string name="leave_name">Name:</string>

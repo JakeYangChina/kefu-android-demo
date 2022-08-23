@@ -43,8 +43,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.easemob.helpdeskdemo.R;
-import com.easemob.helpdeskdemo.utils.FlatFunctionUtils;
 import com.easemob.helpdeskdemo.widget.MyChronometer;
+import com.easemob.veckit.utils.FlatFunctionUtils;
 import com.herewhite.sdk.RoomParams;
 import com.herewhite.sdk.domain.WindowAppParam;
 import com.herewhite.sdk.domain.WindowParams;
@@ -391,12 +391,14 @@ public class CallActivity extends DemoBaseActivity implements IAgoraMessageNotif
                                 createZuoXiSurfaceView(uid);
                                 if (obj != null) {
                                     if (!obj.isAddThreeUser()) {
+                                        // TextUtils.isEmpty(obj.getThreeTrueName()) || "null".equals(obj.getTrueName()) ? obj.getThreeNiceName() : obj.getThreeTrueName(), threeUid
+                                        // addAgoraRadioButton(obj.getNickName(), uid);
                                         addAgoraRadioButton(obj.getNickName(), uid);
                                     } else {
                                         addAgoraRadioButton(getThreeName(obj), uid);
                                     }
                                 } else {
-                                    addAgoraRadioButton("", uid);
+                                    addAgoraRadioButton(mZuoXiSendRequestObj.getThreeNiceName(), uid);
                                 }
                             }
                         });
@@ -463,6 +465,30 @@ public class CallActivity extends DemoBaseActivity implements IAgoraMessageNotif
                             changeRemoteAudioState(uid, true);
                         }
 
+                    }
+
+                    @Override
+                    public void onRemoteVideoStateChanged(int uid, int state, int reason, int elapsed) {
+                        super.onRemoteVideoStateChanged(uid, state, reason, elapsed);
+
+                        if (reason == Constants.REMOTE_VIDEO_STATE_REASON_REMOTE_MUTED) {
+                            // 远端用户停止发送视频流或远端用户禁用视频模块。
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    updateCamera(uid, false);
+                                }
+                            });
+
+                        } else if (reason == Constants.REMOTE_VIDEO_STATE_REASON_REMOTE_UNMUTED) {
+                            // 远端用户恢复发送视频流或远端用户启用视频模块。
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    updateCamera(uid, true);
+                                }
+                            });
+                        }
                     }
 
                     @Override
@@ -705,7 +731,7 @@ public class CallActivity extends DemoBaseActivity implements IAgoraMessageNotif
                 startActivityForResult(intent, CloudActivity.UPLOAD_REQUEST);
             }
         });
-        String uid = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        String uid = String.valueOf(obj.getUid());
         Fastboard fastboard = fastboardView.getFastboard();
         FastRoomOptions roomOptions = new FastRoomOptions(
                 obj.getAppIdentifier(),

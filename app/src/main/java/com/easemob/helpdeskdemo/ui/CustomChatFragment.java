@@ -28,6 +28,8 @@ import com.hyphenate.chat.EMLocationMessageBody;
 import com.hyphenate.chat.EMTextMessageBody;
 import com.hyphenate.chat.EMVoiceMessageBody;
 import com.hyphenate.chat.Message;
+import com.hyphenate.chat.VecConfig;
+import com.hyphenate.helpdesk.callback.Callback;
 import com.hyphenate.helpdesk.easeui.provider.CustomChatRowProvider;
 import com.hyphenate.helpdesk.easeui.recorder.MediaManager;
 import com.hyphenate.helpdesk.easeui.ui.ChatFragment;
@@ -110,7 +112,6 @@ public class CustomChatFragment extends ChatFragment implements ChatFragment.Eas
 
 
 
-        Log.e("eeeeeeeeeee","发消息 =========================");
         //Message.testCmd(AgoraMessage.newAgoraMessage().getCurrentChatUsername());
     }
 
@@ -260,7 +261,10 @@ public class CustomChatFragment extends ChatFragment implements ChatFragment.Eas
         //增加扩展的item
         inputMenu.registerExtendMenuItem(R.string.attach_location, R.drawable.hd_chat_location_selector, ITEM_MAP, R.id.chat_menu_map, extendMenuItemClickListener);
         inputMenu.registerExtendMenuItem(R.string.leave_title, R.drawable.em_chat_phrase_selector, ITEM_LEAVE_MSG, R.id.chat_menu_leave_msg, extendMenuItemClickListener);
-        inputMenu.registerExtendMenuItem(R.string.attach_call_video, R.drawable.em_chat_video_selector, ITEM_VIDEO, R.id.chat_menu_video_call, extendMenuItemClickListener);
+        if (VecConfig.newVecConfig().isOldVideo()){
+            inputMenu.registerExtendMenuItem(R.string.attach_call_video, R.drawable.em_chat_video_selector, ITEM_VIDEO, R.id.chat_menu_video_call, extendMenuItemClickListener);
+        }
+
         inputMenu.registerExtendMenuItem(R.string.attach_evaluation, R.drawable.em_chat_evaluation_selector, ITEM_EVALUATION, R.id.chat_menu_evaluation, extendMenuItemClickListener);
     }
 

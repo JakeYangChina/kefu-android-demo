@@ -1,5 +1,7 @@
 package com.easemob.veckit.bean;
 
+import android.content.Context;
+
 import com.google.gson.Gson;
 import com.hyphenate.helpdesk.util.Log;
 
@@ -30,10 +32,10 @@ public class EntityBean {
         videoStyleBean = gson.fromJson(configJson, VideoStyleBean.class);
     }
 
-    public VideoStyleBean getVideoStyleBean() {
+    public VideoStyleBean getVideoStyleBean(Context context) {
         if (videoStyleBean != null){
             return videoStyleBean;
         }
-        return VideoStyleBean.create();
+        return VideoStyleBean.create(context);
     }
 }

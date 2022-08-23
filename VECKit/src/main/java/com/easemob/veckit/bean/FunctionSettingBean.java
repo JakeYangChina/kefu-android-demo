@@ -3,6 +3,8 @@ package com.easemob.veckit.bean;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.hyphenate.helpdesk.model.Content;
+
 public class FunctionSettingBean {
     private boolean visitorCameraOff;
     private boolean skipWaitingPage;

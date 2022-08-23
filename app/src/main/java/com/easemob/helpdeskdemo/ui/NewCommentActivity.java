@@ -356,6 +356,8 @@ public class NewCommentActivity extends BaseActivity implements View.OnClickList
 
             return;
         }
+
+
         showDialog();
         // create upload service client
         FileUploadManager.FileUploadService service = FileUploadManager.retrofit().create(FileUploadManager.FileUploadService.class);

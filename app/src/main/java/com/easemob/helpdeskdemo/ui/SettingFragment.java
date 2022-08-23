@@ -31,8 +31,8 @@ import androidx.fragment.app.Fragment;
 import com.easemob.helpdeskdemo.Constant;
 import com.easemob.helpdeskdemo.Preferences;
 import com.easemob.helpdeskdemo.R;
-import com.easemob.helpdeskdemo.utils.FlatFunctionUtils;
 import com.easemob.helpdeskdemo.utils.ListenerManager;
+import com.easemob.veckit.utils.FlatFunctionUtils;
 import com.hyphenate.agora.FunctionIconItem;
 import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
@@ -79,6 +79,7 @@ public class SettingFragment extends Fragment implements View.OnClickListener{
 	private static final int REQUEST_CODE_PROJECT_ID = 5;
 
 	private Dialog dialog;
+	private TextView mTextView;
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -118,6 +119,17 @@ public class SettingFragment extends Fragment implements View.OnClickListener{
 		rlProjectId = (RelativeLayout) getView().findViewById(R.id.ll_setting_project_id);
 		rlQcode = (RelativeLayout) getView().findViewById(R.id.rl_qcode);
 		callInterface = getView().findViewById(R.id.callInterface);
+
+		mTextView = getView().findViewById(R.id.tv_setting_nick_login);
+
+	}
+
+	@Override
+	public void onResume() {
+		super.onResume();
+		if (mTextView != null){
+			mTextView.setText(Preferences.getInstance().getLoginUserName());
+		}
 	}
 
 	private void initListener() {
@@ -252,6 +264,7 @@ public class SettingFragment extends Fragment implements View.OnClickListener{
 				@Override
 				public void onSuccess() {
 					changeAppKey(newAppkey);
+					Preferences.getInstance().saveLoginUserName("");
 				}
 
 				@Override

@@ -10,6 +10,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.AppCompatTextView;
 
+import com.easemob.veckit.R;
+
 public class SignatureTextView extends AppCompatTextView {
     public SignatureTextView(@NonNull Context context) {
         super(context);
@@ -31,7 +33,7 @@ public class SignatureTextView extends AppCompatTextView {
     }
 
     public void initHint(){
-        setText("手写签名");
+        setText(getResources().getString(R.string.vec_handwritten_signature));
     }
 
     @Override

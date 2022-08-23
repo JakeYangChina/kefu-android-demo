@@ -5,6 +5,7 @@ import android.app.Application;
 import android.content.Context;
 import android.graphics.Outline;
 import android.graphics.Rect;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.util.TypedValue;
@@ -12,8 +13,10 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
@@ -54,7 +57,26 @@ public class PushMessageLink implements JsCall.IJsCallback {
         }
         // 标识业务处理类型：LinkMessagePush 信息推送
         JSONObject msg = new JSONObject(msgtype);
+
         JSONObject linkMessagePush = msg.getJSONObject("infopush");
+
+        // infopush_start
+        String action = linkMessagePush.getString("action");
+
+        mFlowId = linkMessagePush.getString("flowId");
+
+        JSONObject content = linkMessagePush.getJSONObject("content");
+        // 判断是否为url类型，富文本
+        String type = content.getString("type");
+        String title = content.getString("title");
+        String url = content.getString("content");
+        double heightRatio = content.getDouble("heightRatio");
+
+
+
+
+
+        /*JSONObject linkMessagePush = msg.getJSONObject("infopush");
 
         String action = linkMessagePush.getString("action");
         String type = linkMessagePush.getString("type");
@@ -63,13 +85,14 @@ public class PushMessageLink implements JsCall.IJsCallback {
 
         String title = content.getString("title");
         String url = content.getString("url");
-        double heightRatio = content.getDouble("heightRatio");
+        double heightRatio = content.getDouble("heightRatio");*/
 
         // 显示信息确认，webView
         mVecVebView = new VecVebView(context);
         clipToOutline(mVecVebView);
         mVecVebView.addJavascriptInterface(new JsCall(this),"closeMessagePush");
         setWebChromeClient(mVecVebView);
+        Log.e("eeeeeeeeeee","地址 url = "+url);
         mVecVebView.loadUrl(url);
         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (int) (height * heightRatio));
         layoutParams.gravity = Gravity.BOTTOM;
@@ -124,6 +147,52 @@ public class PushMessageLink implements JsCall.IJsCallback {
                         showAndHidden(mProgressBar, false);
                     }
                 });
+
+                int errorCode = error.getErrorCode();
+                // 断网或者网络连接超时
+                if (errorCode == ERROR_HOST_LOOKUP || errorCode == ERROR_CONNECT || errorCode == ERROR_TIMEOUT) {
+                    showDialog();
+                }
+            }
+
+            @TargetApi(android.os.Build.VERSION_CODES.M)//171016 处理404错误
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request,
+                                            WebResourceResponse errorResponse) {
+                super.onReceivedHttpError(view, request, errorResponse);
+                // 这个方法在6.0才出现
+                int statusCode = errorResponse.getStatusCode();
+                if (404 == statusCode || 500 == statusCode) {
+                    mHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            showAndHidden(mProgressBar, false);
+                        }
+                    });
+                    // view.loadUrl("about:blank");// 避免出现默认的错误界面
+                    showDialog();
+                }
+            }
+        });
+
+
+        vecVebView.setWebChromeClient(new WebChromeClient(){
+            @Override
+            public void onReceivedTitle(WebView view, String title) {
+                super.onReceivedTitle(view, title);
+                // 171016 处理404错误 android 6.0 以下通过title获取
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                    mHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            showAndHidden(mProgressBar, false);
+                        }
+                    });
+                    if (title.contains("404") || title.contains("500") || title.contains("Error")) {
+                        // view.loadUrl("about:blank");// 避免出现默认的错误界面
+                        showDialog();
+                    }
+                }
             }
         });
     }
@@ -142,7 +211,6 @@ public class PushMessageLink implements JsCall.IJsCallback {
         AgoraMessage.getAsyncVisitorIdAndVecSessionId(AgoraMessage.newAgoraMessage().getCurrentChatUsername(), new ValueCallBack<String>() {
             @Override
             public void onSuccess(String value) {
-                Log.e("rrrrrrrr","visitorId = "+value);
                 AgoraMessage.resultReporting(ChatClient.getInstance().tenantId(),
                         value, "infopush", resultObj, new ValueCallBack<String>() {
                             @Override
@@ -150,7 +218,6 @@ public class PushMessageLink implements JsCall.IJsCallback {
                                 mHandler.post(new Runnable() {
                                     @Override
                                     public void run() {
-                                        Log.e("rrrrrrrr","value = "+value);
                                         clear();
                                     }
                                 });
@@ -158,8 +225,6 @@ public class PushMessageLink implements JsCall.IJsCallback {
 
                             @Override
                             public void onError(int error, String errorMsg) {
-                                Log.e("rrrrrrrr","error = "+error);
-                                Log.e("rrrrrrrr","errorMsg = "+errorMsg);
                                 mHandler.post(new Runnable() {
                                     @Override
                                     public void run() {
@@ -179,7 +244,6 @@ public class PushMessageLink implements JsCall.IJsCallback {
                                 mHandler.post(new Runnable() {
                                     @Override
                                     public void run() {
-                                        Log.e("rrrrrrrr","value = "+value);
                                         clear();
                                     }
                                 });
@@ -187,8 +251,6 @@ public class PushMessageLink implements JsCall.IJsCallback {
 
                             @Override
                             public void onError(int error, String errorMsg) {
-                                Log.e("rrrrrrrr","error = "+error);
-                                Log.e("rrrrrrrr","errorMsg = "+errorMsg);
                                 mHandler.post(new Runnable() {
                                     @Override
                                     public void run() {
@@ -198,14 +260,21 @@ public class PushMessageLink implements JsCall.IJsCallback {
                             }
                         });
             }
+
         });
+    }
 
+    private void showDialog(){
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
 
-
-
+            }
+        });
     }
 
     public void clear(){
+        mIPushErrorCallback = null;
         if (mVecVebView != null){
             mVecVebView.destroy();
         }
@@ -268,5 +337,15 @@ public class PushMessageLink implements JsCall.IJsCallback {
 
     private int dp2px(float dpValue, Context context) {
         return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dpValue, context.getResources().getDisplayMetrics());
+    }
+
+    private IPushErrorCallback mIPushErrorCallback;
+
+    public void setIPushErrorCallback(IPushErrorCallback callback){
+        this.mIPushErrorCallback = callback;
+    }
+
+    interface IPushErrorCallback{
+        void onPushError();
     }
 }

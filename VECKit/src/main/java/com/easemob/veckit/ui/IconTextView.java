@@ -9,10 +9,12 @@ import androidx.appcompat.widget.AppCompatTextView;
 public class IconTextView extends AppCompatTextView {
     public IconTextView(Context context) {
         this(context, null);
+        init(context);
     }
 
     public IconTextView(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
+        init(context);
     }
 
     public IconTextView(Context context, AttributeSet attrs, int defStyleAttr) {
@@ -21,9 +23,13 @@ public class IconTextView extends AppCompatTextView {
     }
 
     private void init(Context context){
-        Typeface font = Typeface.createFromAsset(context.getAssets(), "fonts/iconfont.ttf");
-        if (font != null){
-            setTypeface(font);
+        try {
+            Typeface font = Typeface.createFromAsset(context.getAssets(), "fonts/iconfont.ttf");
+            if (font != null){
+                setTypeface(font);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
         }
     }
 }

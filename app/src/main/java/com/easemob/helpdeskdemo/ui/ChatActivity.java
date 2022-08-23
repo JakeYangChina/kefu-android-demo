@@ -3,6 +3,7 @@ package com.easemob.helpdeskdemo.ui;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.easemob.helpdeskdemo.Constant;
 import com.easemob.helpdeskdemo.DemoMessageHelper;
@@ -14,6 +15,7 @@ import com.hyphenate.helpdesk.easeui.ui.BaseActivity;
 import com.hyphenate.helpdesk.easeui.ui.ChatFragment;
 import com.hyphenate.helpdesk.easeui.util.CommonUtils;
 import com.hyphenate.helpdesk.easeui.util.Config;
+import com.hyphenate.helpdesk.model.OrderInfo;
 
 public class ChatActivity extends BaseActivity {
 
@@ -76,7 +78,8 @@ public class ChatActivity extends BaseActivity {
      */
     private void sendOrderMessage(int selectedIndex){
         Message message = Message.createTxtSendMessage(getMessageContent(selectedIndex), toChatUsername);
-        message.addContent(DemoMessageHelper.createOrderInfo(this, selectedIndex));
+        OrderInfo orderInfo = DemoMessageHelper.createOrderInfo(this, selectedIndex);
+        message.addContent(orderInfo);
         ChatClient.getInstance().chatManager().saveMessage(message);
     }
 

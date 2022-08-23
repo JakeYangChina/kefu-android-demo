@@ -1,19 +1,16 @@
 package com.easemob.veckit;
 
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import com.hyphenate.chat.ChatClient;
+import com.hyphenate.helpdesk.util.Log;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import javax.net.ssl.HttpsURLConnection;
 
 public class NetWork {
     public static int DEFAULT_CONNECTION_TIMEOUT = 8 * 1000;
@@ -40,7 +37,7 @@ public class NetWork {
                     conn.setUseCaches(false);
                     conn.connect();
                     int code = conn.getResponseCode();
-
+                    Log.e("wwwwwwwwwwwwww","code = "+ code);
                     if (code == 200) {
                         inputStream = conn.getInputStream();
                         outputStream = new FileOutputStream(saveUrl);
@@ -55,6 +52,7 @@ public class NetWork {
                     if (callBack != null){
                         callBack.fail(-1, e.getMessage());
                     }
+                    Log.e("wwwwwwwwwwwwww","error = "+ e.toString());
                 }finally {
                     try {
                         if (inputStream != null){

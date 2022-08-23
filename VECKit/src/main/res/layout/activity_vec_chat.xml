@@ -132,6 +132,13 @@
                 android:layout_height="wrap_content"
                 android:visibility="gone" />
 
+            <!--<com.easemob.veckit.ui.BottomContainer
+                android:visibility="gone"
+                android:id="@+id/bcv"
+                android:layout_alignParentBottom="true"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>-->
+
             <!--底部提示名称 android:layout_above="@+id/bcv"-->
             <LinearLayout
                 android:layout_alignParentBottom="true"
@@ -191,6 +198,30 @@
 
             </FrameLayout>
 
+            <TextView
+                android:visibility="gone"
+                android:id="@+id/focusTv"
+                android:background="@drawable/hd_focus"
+                android:layout_centerVertical="true"
+                android:layout_centerHorizontal="true"
+                android:layout_width="@dimen/dp_82"
+                android:layout_height="@dimen/dp_82"/>
+
+            <!--文字聊天-->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+                <View
+                    android:id="@+id/chatView"
+                    android:visibility="gone"
+                    android:layout_alignParentBottom="true"
+                    android:background="@drawable/item_chat_shape"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"/>
+                <include
+                    layout="@layout/item_vec_chat"/>
+            </RelativeLayout>
+
 
             <!--视频未接通，被动-->
             <FrameLayout
@@ -235,7 +266,7 @@
                 <!--视频通话-->
                 <TextView
                     android:textColor="@android:color/white"
-                    android:text="视频通话"
+                    android:text="@string/vec_video_call"
                     android:layout_marginTop="36dp"
                     android:gravity="center"
                     android:layout_width="match_parent"
@@ -268,7 +299,7 @@
 
                     <TextView
                         android:layout_marginTop="10dp"
-                        android:text="客服邀请您进行视频通话"
+                        android:text="@string/vec_visitor_to_agent"
                         android:textColor="@android:color/white"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"/>

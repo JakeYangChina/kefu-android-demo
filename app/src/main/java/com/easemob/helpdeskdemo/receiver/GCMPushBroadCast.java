@@ -55,7 +55,6 @@ public class GCMPushBroadCast extends BroadcastReceiver {
 			mBuilder.setContentText(message);
 			mBuilder.setContentIntent(pendingIntent);
 			Notification notification = mBuilder.build();
-
 			notificationManager.notify(notifyID, notification);
 		}catch (Exception e){
 			e.printStackTrace();

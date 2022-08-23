@@ -2,6 +2,7 @@ package com.easemob.helpdeskdemo;
 
 import android.content.Context;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.hyphenate.helpdesk.model.AgentIdentityInfo;
 import com.hyphenate.helpdesk.model.ContentFactory;
@@ -9,6 +10,8 @@ import com.hyphenate.helpdesk.model.OrderInfo;
 import com.hyphenate.helpdesk.model.QueueIdentityInfo;
 import com.hyphenate.helpdesk.model.VisitorInfo;
 import com.hyphenate.helpdesk.model.VisitorTrack;
+
+import org.json.JSONObject;
 
 /**
  * 对轨迹跟踪的消息操作 此类不是必须，只是为了演示和初始化一些数据
@@ -24,12 +27,25 @@ public class DemoMessageHelper {
 	public static VisitorInfo createVisitorInfo() {
 		VisitorInfo info = ContentFactory.createVisitorInfo(null);
 		info.nickName(Preferences.getInstance().getNickName())
-		    .name(Preferences.getInstance().getUserName())
+		    // .name(Preferences.getInstance().getUserName())
+		    .name(Preferences.getInstance().getLoginUserName())
 		    .qq("10000")
 			.phone("15811200000")
 		    .companyName("easemob")
 		    .description("")
 		    .email("abc@123.com");
+		JSONObject content = info.getContent();
+
+		try {
+			JSONObject object = new JSONObject();
+			object.put("test","sdfdsfdsfsdfdsfdsfadda");
+			content.put("userDefineColumn",object.toString());
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+
+		Log.e("ooooooooooopppppppp","visitorInfo = "+info.getContent());
+
 		return info;
 	}
 
@@ -56,6 +72,19 @@ public class DemoMessageHelper {
 			default:
 				break;
 		}
+
+		JSONObject content = track.getContent();
+		try {
+			JSONObject object = new JSONObject();
+			object.put("test","sdfdsfdsfsdfdsfdsfadda");
+			content.put("userDefineColumn",object.toString());
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+
+
+		Log.e("pppppppppppp","ooooooooooopppppppp dd =  "+track.getContent());
+
 		return track;
 	}
 	
@@ -81,6 +110,19 @@ public class DemoMessageHelper {
 			default:
 				break;
 		}
+
+		JSONObject content = info.getContent();
+		try {
+			JSONObject object = new JSONObject();
+			object.put("test","sdfdsfdsfsdfdsfdsfadda");
+			content.put("userDefineColumn",object.toString());
+		}catch (Exception e){
+			e.printStackTrace();
+			Log.e("ooooooooooopppppppp","error = "+e.toString());
+		}
+
+
+		Log.e("pppppppppppp","ooooooooooopppppppp ss =  "+info.getContent());
 		return info;
 		
 	}

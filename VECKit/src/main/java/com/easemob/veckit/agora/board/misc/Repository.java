@@ -73,10 +73,6 @@ public class Repository {
         this.context = context;
     }
 
-    public String getUserId() {
-        return Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
-    }
-
     public void getRemoteData(int delay, final Callback callback) {
         Handler handler = new Handler(Looper.getMainLooper());
         handler.postDelayed(new Runnable() {

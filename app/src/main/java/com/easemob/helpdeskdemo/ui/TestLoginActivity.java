@@ -69,7 +69,6 @@ public class TestLoginActivity extends DemoBaseActivity {
         ChatClient.getInstance().register(account, userPwd, new Callback() {
             @Override
             public void onSuccess() {
-                Log.e("oooooooo","uname = "+account);
                 Log.d(TAG, "demo register success");
                 runOnUiThread(new Runnable() {
                     @Override

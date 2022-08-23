@@ -15,8 +15,8 @@ android {
         // 电子白板，最低要求21
         minSdkVersion 21
         targetSdkVersion 29
-        versionCode 23
-        versionName "1.3.2.4"
+        versionCode 24
+        versionName "1.3.2.8"
         multiDexEnabled true
 
         ndk {

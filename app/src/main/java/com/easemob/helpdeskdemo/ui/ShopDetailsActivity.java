@@ -21,6 +21,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 
 import com.easemob.helpdeskdemo.Constant;
@@ -28,13 +29,20 @@ import com.easemob.helpdeskdemo.HMSPushHelper;
 import com.easemob.helpdeskdemo.Preferences;
 import com.easemob.helpdeskdemo.R;
 import com.easemob.veckit.VECKitCalling;
+import com.easemob.veckit.utils.FlatFunctionUtils;
+import com.hyphenate.agora.FunctionIconItem;
 import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
+import com.hyphenate.chat.VecConfig;
 import com.hyphenate.helpdesk.Error;
 import com.hyphenate.helpdesk.callback.Callback;
+import com.hyphenate.helpdesk.callback.ValueCallBack;
 import com.hyphenate.helpdesk.easeui.widget.ToastHelper;
 
+import java.util.List;
 import java.util.Locale;
+
+import static java.lang.Compiler.enable;
 
 public class ShopDetailsActivity extends DemoBaseActivity {
 	private View rl_tochat;
@@ -45,23 +53,43 @@ public class ShopDetailsActivity extends DemoBaseActivity {
 	private int index = Constant.INTENT_CODE_IMG_SELECTED_DEFAULT;
 	private ProgressDialog progressDialog;
 	private boolean progressShow;
+	private View mLineView;
+	private View mCallVideoLlt;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.em_activity_shop_details);
 		index = getIntent().getIntExtra(Constant.INTENT_CODE_IMG_SELECTED_KEY, Constant.INTENT_CODE_IMG_SELECTED_DEFAULT);
-		
+
+
 		rl_tochat = $(R.id.rl_tochat);
 		mImageButton = $(R.id.rl_back);
 		iv_buy_1 = $(R.id.iv_buy_part1);
 		iv_buy_2 = $(R.id.iv_buy_part2);
 		iv_buy_3 = $(R.id.iv_buy_part3);
 
-		$(R.id.callVideoLlt).setOnClickListener(new OnClickListener() {
+		mLineView = $(R.id.lineView);
+		mCallVideoLlt = $(R.id.callVideoLlt);
+		mLineView.setVisibility(VecConfig.newVecConfig().isEnableVideo() ? View.VISIBLE : View.GONE);
+		mCallVideoLlt.setVisibility(VecConfig.newVecConfig().isEnableVideo() ? View.VISIBLE : View.GONE);
+
+		/*if (!VecConfig.newVecConfig().isEnableVideo()){
+			getIconEndable(ChatClient.getInstance().tenantId());
+		}*/
+
+		getIconEndable(ChatClient.getInstance().tenantId());
+
+		mCallVideoLlt.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				//设置点击通知栏跳转事件
+				if (!VecConfig.newVecConfig().isEnableVideo()){
+					Toast.makeText(getApplication(), "未开灰度！", Toast.LENGTH_LONG).show();
+					return;
+				}
+
+
 				if (ChatClient.getInstance().isLoggedInBefore()){
 					VECKitCalling.callingRequest(ShopDetailsActivity.this, Preferences.getInstance().getCustomerAccount());
 					// CallVideoActivity.callingRequest(ShopDetailsActivity.this, Preferences.getInstance().getCustomerAccount());
@@ -83,11 +111,59 @@ public class ShopDetailsActivity extends DemoBaseActivity {
 		rl_tochat.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
+				progressDialog = getProgressDialog();
+				progressDialog.setMessage(getString(R.string.is_contact_customer));
+				progressDialog.show();
+
+				AgoraMessage.asyncGetTenantIdFunctionIcons(ChatClient.getInstance().tenantId(), new ValueCallBack<List<FunctionIconItem>>() {
+					@Override
+					public void onSuccess(List<FunctionIconItem> value) {
+						checkLogin();
+					}
+
+					@Override
+					public void onError(int error, String errorMsg) {
+						checkLogin();
+					}
+				});
+
+			}
+		});
+	}
+
+	private void checkLogin(){
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				progressDialog.dismiss();
+
 				Intent intent = new Intent();
 				intent.putExtra(Constant.INTENT_CODE_IMG_SELECTED_KEY, index);
 				intent.putExtra(Constant.MESSAGE_TO_INTENT_EXTRA, Constant.MESSAGE_TO_AFTER_SALES);
 				intent.setClass(ShopDetailsActivity.this, LoginActivity.class);
 				startActivity(intent);
+			}
+		});
+
+	}
+
+	private void getIconEndable(String tenantId) {
+		AgoraMessage.asyncGetTenantIdFunctionIcons(tenantId, new ValueCallBack<List<FunctionIconItem>>() {
+			@Override
+			public void onSuccess(List<FunctionIconItem> value) {
+
+				runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+						mLineView.setVisibility(VecConfig.newVecConfig().isEnableVideo() ? View.VISIBLE : View.GONE);
+						mCallVideoLlt.setVisibility(VecConfig.newVecConfig().isEnableVideo() ? View.VISIBLE : View.GONE);
+					}
+				});
+			}
+
+			@Override
+			public void onError(int error, String errorMsg) {
+
 			}
 		});
 	}

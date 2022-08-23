@@ -10,9 +10,6 @@ import android.graphics.Outline;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.media.AudioManager;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -47,9 +44,8 @@ import androidx.annotation.Nullable;
 
 import com.easemob.helpdeskdemo.Constant;
 import com.easemob.helpdeskdemo.DemoHelper;
-import com.easemob.helpdeskdemo.utils.CommonUtils;
-import com.easemob.helpdeskdemo.utils.FlatFunctionUtils;
 import com.easemob.helpdeskdemo.widget.MyChronometer;
+import com.easemob.veckit.utils.FlatFunctionUtils;
 import com.herewhite.sdk.RoomParams;
 import com.herewhite.sdk.domain.WindowAppParam;
 import com.herewhite.sdk.domain.WindowParams;
@@ -143,7 +139,6 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
 
 
     private AudioManager mAudioManager;
-    private Ringtone mRingtone;
     private TextView mTvTitleTips;
     private VideoItemContainerView mMembersContainer;
     private View mBottomContainer;
@@ -518,11 +513,11 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
         // 开启扬声器
         mAudioManager.setSpeakerphoneOn(true);
 
-        Uri ringUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+        /*Uri ringUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
         mRingtone = RingtoneManager.getRingtone(this, ringUri);
         if (mRingtone != null) {
             mRingtone.play();
-        }
+        }*/
         mHandler.removeCallbacks(timeoutHangup);
         mHandler.postDelayed(timeoutHangup, MAKE_CALL_TIMEOUT);
         mStreams.clear();
@@ -552,7 +547,7 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
                                         addAgoraRadioButton(getThreeName(obj), uid);
                                     }
                                 } else {
-                                    addAgoraRadioButton("", uid);
+                                    addAgoraRadioButton(mZuoXiSendRequestObj.getThreeNiceName(), uid);
                                 }
                             }
                         });
@@ -621,6 +616,31 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
                         }
 
                     }
+
+                    @Override
+                    public void onRemoteVideoStateChanged(int uid, int state, int reason, int elapsed) {
+                        super.onRemoteVideoStateChanged(uid, state, reason, elapsed);
+
+                        if (reason == Constants.REMOTE_VIDEO_STATE_REASON_REMOTE_MUTED) {
+                            // 远端用户停止发送视频流或远端用户禁用视频模块。
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    updateCamera(uid, false);
+                                }
+                            });
+
+                        } else if (reason == Constants.REMOTE_VIDEO_STATE_REASON_REMOTE_UNMUTED) {
+                            // 远端用户恢复发送视频流或远端用户启用视频模块。
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    updateCamera(uid, true);
+                                }
+                            });
+                        }
+                    }
+
                 });
 
         // 初始化屏幕共享进程
@@ -734,15 +754,10 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
         }
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        Log.e("yyyyyyyyy","onDestroy");
-    }
-
     // 动态显示底部导航条目
     private void switchBottomItem() {
         List<FunctionIconItem> functionIconItems = FlatFunctionUtils.get().getIconItems();
+
         /*List<FunctionIconItem> functionIconItems = new ArrayList<>();
         FunctionIconItem iconItem1 = new FunctionIconItem("shareDesktop");
         iconItem1.setStatus("enable");
@@ -750,6 +765,7 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
         iconItem2.setStatus("enable");
         functionIconItems.add(iconItem1);
         functionIconItems.add(iconItem2);*/
+
         if (functionIconItems.size() == 0) {
             // 默认显示3个图标 + 0 = 显示3个图标
             addIcon_0();
@@ -970,7 +986,8 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
         });
 
         Fastboard fastboard = fastboardView.getFastboard();
-        String uid = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        // String uid = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        String uid = String.valueOf(obj.getUid());
         FastRoomOptions roomOptions = new FastRoomOptions(
                 obj.getAppIdentifier(),
                 obj.getRoomUUID(),
@@ -1469,22 +1486,22 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
             videoItemLayoutView = mInflater.inflate(R.layout.layout_call_head_item_new, null);
             clipToOutline(videoItemLayoutView);
             videoItemLayoutView.setTag(uid);
-            ivNick = videoItemLayoutView.findViewById(com.easemob.helpdeskdemo.R.id.tv_nick);
-            iconTextView = videoItemLayoutView.findViewById(com.easemob.helpdeskdemo.R.id.remoteIconTextView);
+            ivNick = videoItemLayoutView.findViewById(R.id.tv_nick);
+            iconTextView = videoItemLayoutView.findViewById(R.id.remoteIconTextView);
             ivNick.setText(niceName);
-            cameraView = videoItemLayoutView.findViewById(com.easemob.helpdeskdemo.R.id.cameraView);
+            cameraView = videoItemLayoutView.findViewById(R.id.cameraView);
             mMembersContainer.addVideoIconView(0, uid, videoItemLayoutView);
 
         } else {
-            ivNick = videoItemLayoutView.findViewById(com.easemob.helpdeskdemo.R.id.tv_nick);
-            cameraView = videoItemLayoutView.findViewById(com.easemob.helpdeskdemo.R.id.cameraView);
+            ivNick = videoItemLayoutView.findViewById(R.id.tv_nick);
+            cameraView = videoItemLayoutView.findViewById(R.id.cameraView);
             ivNick.setText(niceName);
-            iconTextView = videoItemLayoutView.findViewById(com.easemob.helpdeskdemo.R.id.remoteIconTextView);
+            iconTextView = videoItemLayoutView.findViewById(R.id.remoteIconTextView);
         }
 
-        whiteboardDef = videoItemLayoutView.findViewById(com.easemob.helpdeskdemo.R.id.whiteboardDef);
+        whiteboardDef = videoItemLayoutView.findViewById(R.id.whiteboardDef);
         // TODO 保存remoteView
-        FrameLayout remoteView = videoItemLayoutView.findViewById(com.easemob.helpdeskdemo.R.id.remoteView);
+        FrameLayout remoteView = videoItemLayoutView.findViewById(R.id.remoteView);
         flatItem.setRemoteView(remoteView);
         flatItem.setCameraView(cameraView);
         flatItem.setTextViewName(ivNick);
@@ -1702,9 +1719,9 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            if (mRingtone != null) {
+                            /*if (mRingtone != null) {
                                 mRingtone.stop();
-                            }
+                            }*/
                             openSpeakerOn();
 
                             mNoAcceptView.setVisibility(View.GONE);
@@ -1730,9 +1747,9 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
                         @Override
                         public void run() {
                             closeDialog();
-                            if (mRingtone != null) {
+                            /*if (mRingtone != null) {
                                 mRingtone.stop();
-                            }
+                            }*/
 
                             if (mAgoraRtcEngine != null) {
                                 if (isSharing){
@@ -2033,9 +2050,9 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
         AgoraMessage.newAgoraMessage().unRegisterAgoraMessageNotify(getClass().getSimpleName());
         mIsClick = false;
         sendIsOnLineState(false);
-        if (mRingtone != null && mRingtone.isPlaying()) {
+        /*if (mRingtone != null && mRingtone.isPlaying()) {
             mRingtone.stop();
-        }
+        }*/
         if (mHandler != null) {
             mHandler.removeCallbacks(timeoutDialog);
             mHandler.removeCallbacks(timeoutHangup);
@@ -2342,7 +2359,7 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
 
     private void initFlatIconView(){
         if (mFlatRoomItem == null) {
-            mFlatRoomItem = View.inflate(this, com.easemob.helpdeskdemo.R.layout.flat_room_item, null);
+            mFlatRoomItem = View.inflate(this, R.layout.flat_room_item, null);
             // 当画中画时，需要隐藏
             // mFlatIconView = mFlatRoomItem.findViewById(com.easemob.helpdeskdemo.R.id.flatIconView);
             // 全屏显示电子白板

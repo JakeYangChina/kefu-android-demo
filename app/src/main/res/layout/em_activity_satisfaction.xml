@@ -64,6 +64,81 @@
                 </LinearLayout>
             </RelativeLayout>
 
+            <LinearLayout
+                android:visibility="gone"
+                android:id="@+id/pintJiaCLlt"
+                android:orientation="vertical"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="@dimen/dp_10"
+                android:paddingLeft="20dp"
+                android:paddingEnd="20dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:id="@+id/pingJiaTv"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"/>
+
+                <LinearLayout
+                    android:layout_marginTop="@dimen/dp_10"
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <LinearLayout
+                        android:id="@+id/pingJiaOneLlt"
+                        android:layout_weight="1"
+                        android:paddingLeft="20dp"
+                        android:paddingEnd="20dp"
+                        android:background="@drawable/item_option_bg"
+                        android:gravity="center"
+                        android:orientation="horizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="42dp">
+                        <ImageView
+                            android:src="@drawable/item_one_bg"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"/>
+                        <TextView
+                            android:textColor="@color/normal_text_color"
+                            android:singleLine="true"
+                            android:ellipsize="end"
+                            android:id="@+id/pingJiaOneTv"
+                            android:duplicateParentState="true"
+                            android:layout_marginLeft="10dp"
+                            android:text="已解决"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/pingJiaTwoLlt"
+                        android:layout_marginLeft="20dp"
+                        android:layout_weight="1"
+                        android:paddingLeft="20dp"
+                        android:paddingEnd="20dp"
+                        android:background="@drawable/item_option_bg"
+                        android:gravity="center"
+                        android:orientation="horizontal"
+                        android:layout_width="0dp"
+                        android:layout_height="42dp">
+                        <ImageView
+                            android:src="@drawable/item_two_bg"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"/>
+                        <TextView
+                            android:textColor="@color/normal_text_color"
+                            android:singleLine="true"
+                            android:ellipsize="end"
+                            android:id="@+id/pingJiaTwoTv"
+                            android:duplicateParentState="true"
+                            android:layout_marginLeft="10dp"
+                            android:text="未解决"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

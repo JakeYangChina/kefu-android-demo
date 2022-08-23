@@ -18,15 +18,29 @@ import android.view.View;
 import android.view.ViewOutlineProvider;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.widget.EditText;
 import android.widget.ImageView;
+import com.easemob.veckit.ui.RatingBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.easemob.veckit.bean.DegreeBean;
+import com.easemob.veckit.bean.EnquiryOptionsBean;
 import com.easemob.veckit.bean.EntityBean;
+import com.easemob.veckit.bean.SubmitEvaluationBean;
 import com.easemob.veckit.bean.VideoStyleBean;
 import com.easemob.veckit.floating.FloatWindowManager;
+import com.easemob.veckit.ui.EvaluateView;
+import com.easemob.veckit.ui.flow.FlowBean;
+import com.easemob.veckit.ui.flow.FlowTagLayout;
+import com.easemob.veckit.utils.FlatFunctionUtils;
+import com.easemob.veckit.utils.Utils;
+import com.easemob.veckit.utils.WaitNetworkUtils;
+import com.google.gson.Gson;
+import com.hyphenate.agora.FunctionIconItem;
 import com.hyphenate.agora.IEndCallback;
 import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
@@ -39,9 +53,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 
-public class CallVideoActivity extends BaseActivity implements View.OnClickListener, IEndCallback {
+public class CallVideoActivity extends BaseActivity implements View.OnClickListener, IEndCallback, RatingBar.OnRatingChangeListener {
     private final static String TAG = CallVideoActivity.class.getSimpleName();
     public final static String DIALOG_TYPE_KEY = "dialog_type_key";
     public final static String LOAD_LOCAL_STYLE = "load_local_style";
@@ -57,10 +75,12 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     public final static int DIALOG_TYPE_SEND = 2;
     // 发起视频，等待人数
     public final static int DIALOG_TYPE_WAIT = 3;
-    // 重新发起
+    // 满意度
     public final static int DIALOG_TYPE_RETRY = 4;
     // 座席端发起视频
     public final static int DIALOG_TYPE_PASSIVE = 5;
+    // 挂断
+    public final static int DIALOG_TYPE_END = 6;
     // 当前dialog类型
     private int mCurrentDialogType;
 
@@ -87,15 +107,27 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     private ImageView mHangupIv;
     private View mPassiveLlt;
     private ImageView mAcceptIv;
+    private String mSmg;
+    private EvaluateView mEvaluateFlt;
+    private TextView mEvaluateTv;
+    private View mOkEvaluateTv;
+    private FlowTagLayout mFlowTagLayout;
+    private RatingBar mRatingBar;
+    private View mProgressTv;
+    private TextView mTitleTv;
+    private TextView mShowTv;
+    private EditText mEtView;
+    private boolean mIsRun;
+    private ImageView mPhotoIv;
 
     // 主动
-    public static void callingRequest(Context context, String toChatUserName){
+    public static void callingRequest(Context context, String toChatUserName) {
         Intent intent = new Intent(context, CallVideoActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         intent.putExtra(DIALOG_TYPE_KEY, DIALOG_TYPE_DEFAULT);
         // 主动
         intent.putExtra(VideoCallWindowService.INTENT_CALLING_TAG, VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE);
-        if (TextUtils.isEmpty(toChatUserName)){
+        if (TextUtils.isEmpty(toChatUserName)) {
             toChatUserName = AgoraMessage.newAgoraMessage().getCurrentChatUsername();
         }
         intent.putExtra(VideoCallWindowService.CURRENT_CHAT_USER_NAME, toChatUserName);
@@ -103,60 +135,97 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     }
 
     // 主动
-    public static void callingRequest(Context context, String toChatUserName, String jsonStyle){
+    public static void callingRequest(Context context, String toChatUserName, String jsonStyle) {
         sToChatUserName = toChatUserName;
         Intent intent = new Intent(context, CallVideoActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         intent.putExtra(DIALOG_TYPE_KEY, DIALOG_TYPE_DEFAULT);
         // 主动
         intent.putExtra(VideoCallWindowService.INTENT_CALLING_TAG, VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE);
         intent.putExtra(VIDEO_STYLE_KEY, jsonStyle);
-        if (TextUtils.isEmpty(toChatUserName)){
+        if (TextUtils.isEmpty(toChatUserName)) {
             toChatUserName = AgoraMessage.newAgoraMessage().getCurrentChatUsername();
         }
         intent.putExtra(VideoCallWindowService.CURRENT_CHAT_USER_NAME, toChatUserName);
         context.startActivity(intent);
     }
 
-    static void startDialogTypeRetry(Context context, String toChatUserName){
+    public static void startDialogTypeRetry(Context context, String content) {
         Intent intent = new Intent(context, CallVideoActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         intent.putExtra(DIALOG_TYPE_KEY, DIALOG_TYPE_RETRY);
         intent.putExtra(LOAD_LOCAL_STYLE, true);
         // 主动
         intent.putExtra(VideoCallWindowService.INTENT_CALLING_TAG, VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE);
-        if (TextUtils.isEmpty(toChatUserName)){
+        intent.putExtra("content", content);
+        context.startActivity(intent);
+    }
+
+    // 挂断电话显示的页面
+    public static void startDialogTypeEnd(Context context, String toChatUserName) {
+        Intent intent = new Intent(context, CallVideoActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.putExtra(DIALOG_TYPE_KEY, DIALOG_TYPE_END);
+        intent.putExtra(LOAD_LOCAL_STYLE, true);
+        // 主动
+        intent.putExtra(VideoCallWindowService.INTENT_CALLING_TAG, VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE);
+        if (TextUtils.isEmpty(toChatUserName)) {
             toChatUserName = AgoraMessage.newAgoraMessage().getCurrentChatUsername();
         }
         intent.putExtra(VideoCallWindowService.CURRENT_CHAT_USER_NAME, toChatUserName);
         context.startActivity(intent);
     }
 
+    /*public static void startDialogTypeRetry(Context context, String toChatUserName) {
+        Intent intent = new Intent(context, CallVideoActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.putExtra(DIALOG_TYPE_KEY, DIALOG_TYPE_RETRY);
+        intent.putExtra(LOAD_LOCAL_STYLE, true);
+        // 主动
+        intent.putExtra(VideoCallWindowService.INTENT_CALLING_TAG, VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE);
+        if (TextUtils.isEmpty(toChatUserName)) {
+            toChatUserName = AgoraMessage.newAgoraMessage().getCurrentChatUsername();
+        }
+        intent.putExtra(VideoCallWindowService.CURRENT_CHAT_USER_NAME, toChatUserName);
+        context.startActivity(intent);
+    }*/
+
 
     // 被动
-    public static void callingResponse(Context context, Intent intent){
+    public static void callingResponse(Context context, Intent intent) {
+
+        int zuo_xi_active = intent.getIntExtra("zuo_xi_active", 0);
         Intent i = new Intent(context, CallVideoActivity.class);
-        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         i.putExtra(DIALOG_TYPE_KEY, DIALOG_TYPE_NO);
 
-        i.putExtra("type", intent.getStringExtra("type"));
-        i.putExtra("appid", intent.getStringExtra("appid"));
-        Parcelable zuoXiSendRequestObj = intent.getParcelableExtra("zuoXiSendRequestObj");
-        i.putExtra("zuoXiSendRequestObj", zuoXiSendRequestObj);
         i.putExtra("to", intent.getStringExtra("to"));
         i.putExtra("from", intent.getStringExtra("from"));
-
-        // 被动
-        i.putExtra(VideoCallWindowService.INTENT_CALLING_TAG, VideoCallWindowService.INTENT_CALLING_TAG_PASSIVE_VALUE);
         i.putExtra(VideoCallWindowService.CURRENT_CHAT_USER_NAME, intent.getStringExtra("from"));
+
+        if (zuo_xi_active == 0){
+            i.putExtra("type", intent.getStringExtra("type"));
+            i.putExtra("appid", intent.getStringExtra("appid"));
+            Parcelable zuoXiSendRequestObj = intent.getParcelableExtra("zuoXiSendRequestObj");
+            i.putExtra("zuoXiSendRequestObj", zuoXiSendRequestObj);
+
+            // 被动
+            i.putExtra(VideoCallWindowService.INTENT_CALLING_TAG, VideoCallWindowService.INTENT_CALLING_TAG_PASSIVE_VALUE);
+
+        }else {
+            // 坐席主动发送邀请
+            i.putExtra("msg", intent.getStringExtra("msg"));
+            i.putExtra(VideoCallWindowService.INTENT_CALLING_TAG, VideoCallWindowService.INTENT_CALLING_TAG_ZUO_XI_ACTIVE_VALUE);
+        }
+
         context.startActivity(i);
 
     }
 
     // 被动
-    public static void callingResponse(Context context, Intent intent, String jsonStyle){
+    public static void callingResponse(Context context, Intent intent, String jsonStyle) {
         Intent i = new Intent(context, CallVideoActivity.class);
-        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         i.putExtra(DIALOG_TYPE_KEY, DIALOG_TYPE_NO);
         intent.putExtra(VIDEO_STYLE_KEY, jsonStyle);
 
@@ -197,7 +266,11 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         // 判断是否为主动
         int isActive = intent.getIntExtra(VideoCallWindowService.INTENT_CALLING_TAG,
                 VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE);
-        return isActive == VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE;
+
+
+
+        return isActive == VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE
+                || isActive == VideoCallWindowService.INTENT_CALLING_TAG_ZUO_XI_ACTIVE_VALUE;
     }
 
     @Override
@@ -208,32 +281,75 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         int isActive = intent.getIntExtra(VideoCallWindowService.INTENT_CALLING_TAG,
                 VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE);
         try {
+            initEvaluate();
             initPassiveView();
             initStyle(intent, isActive == VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE);
-        } catch (JSONException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
-        if (isActive == VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE){
-            checkPermission();
+
+        checkPermission();
+        if (isActive == VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE) {
             mToChatUserName = intent.getStringExtra(VideoCallWindowService.CURRENT_CHAT_USER_NAME);
             initView();
             int dialogType = intent.getIntExtra(DIALOG_TYPE_KEY, DIALOG_TYPE_DEFAULT);
-            if (dialogType == DIALOG_TYPE_DEFAULT){
-                dialogType(mVideoStyleBean.getFunctionSettings().isSkipWaitingPage() ? DIALOG_TYPE_SEND : DIALOG_TYPE_DEFAULT);
-                if (mCurrentDialogType == DIALOG_TYPE_SEND){
+            if (dialogType == DIALOG_TYPE_DEFAULT) {
+                /*dialogType(mVideoStyleBean.getFunctionSettings().isSkipWaitingPage() ? DIALOG_TYPE_SEND : DIALOG_TYPE_DEFAULT);
+                if (mCurrentDialogType == DIALOG_TYPE_SEND) {
                     activeVideo(mIsHavPermission);
+                }*/
+
+                dialogType(mVideoStyleBean.getFunctionSettings().isSkipWaitingPage() ? DIALOG_TYPE_WAIT : DIALOG_TYPE_DEFAULT);
+                if (mCurrentDialogType == DIALOG_TYPE_WAIT) {
+                    activeVideo(mIsHavPermission);
+                    // requestWait();
                 }
-            }else if (dialogType == DIALOG_TYPE_SEND){
+
+            } else if (dialogType == DIALOG_TYPE_SEND) {
                 dialogType(DIALOG_TYPE_SEND);
-            }else if (dialogType == DIALOG_TYPE_RETRY){
+            } else if (dialogType == DIALOG_TYPE_RETRY) {
+                // 满意度评价
+                mEvaluateFlt.setIsAllowClick(true);
                 dialogType(DIALOG_TYPE_RETRY);
+            }else if (dialogType == DIALOG_TYPE_END){
+                // 挂断后显示的页面
+                dialogType(DIALOG_TYPE_END);
             }
+        } else if (isActive == VideoCallWindowService.INTENT_CALLING_TAG_ZUO_XI_ACTIVE_VALUE){
+            // 坐席主动邀请视频
+            mToChatUserName = intent.getStringExtra(VideoCallWindowService.CURRENT_CHAT_USER_NAME);
+            mSmg = intent.getStringExtra("msg");
+            getTenantIdFunctionIcons();
+            initView();
+            dialogType(DIALOG_TYPE_NO);
         }else {
-            // 被动 坐席 --> 访客端
+            // 被动 坐席 --> 访客端 响应
             // 检测是否有悬浮权限
             passVideo(FloatWindowManager.getInstance().checkPermission(this), intent);
         }
+    }
+
+    // 初始化评价相关控件
+    private void initEvaluate() {
+        mEvaluateFlt = $(R.id.evaluateFlt);
+        mFlowTagLayout = $(R.id.flowTagLayout);
+        mRatingBar = $(R.id.ratingBar);
+        // title文字
+        mTitleTv = $(R.id.titleTv);
+        // 备注
+        mEtView = $(R.id.etView);
+        // mRatingBar.setOnRatingBarChangeListener(this);
+        mRatingBar.setOnRatingChangeListener(this);
+        // 满意度文字
+        mShowTv = $(R.id.showTv);
+        // 评价完成页面
+        mEvaluateTv = $(R.id.evaluateTv);
+        mProgressTv = $(R.id.progressTv);
+        mOkEvaluateTv = $(R.id.okEvaluateTv);
+        mOkEvaluateTv.setOnClickListener(this);
+        View evaluateView = $(R.id.evaluateView);
+        clipToOutline(evaluateView);
     }
 
     // 坐席主动发视频邀请
@@ -248,31 +364,30 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     private void request(Callback callback) {
         String tenantId = ChatClient.getInstance().tenantId();// "77556"
         String configId = ChatClient.getInstance().getConfigId();
-        if (TextUtils.isEmpty(configId)){
+        if (TextUtils.isEmpty(configId)) {
             return;
         }
         AgoraMessage.asyncInitStyle(tenantId, configId, new ValueCallBack<String>() {
             @Override
             public void onSuccess(String value) {
                 try {
-                    Log.e("aaaaaaaaaa","style = "+value);
                     JSONObject jsonObject = new JSONObject(value);
-                    if (!jsonObject.has("status")){
+                    if (!jsonObject.has("status")) {
                         return;
                     }
                     String status = jsonObject.getString("status");
-                    if (!"ok".equalsIgnoreCase(status)){
+                    if (!"ok".equalsIgnoreCase(status)) {
                         return;
                     }
 
                     // 存起来
                     JSONObject entity = jsonObject.getJSONObject("entity");
-                    if (isFinishing()){
+                    if (isFinishing()) {
                         return;
                     }
 
                     String json = entity.toString();
-                    if (!getLocalData().equals(json)){
+                    if (!getLocalData().equals(json)) {
                         // 改变数据
                         runOnUiThread(() -> {
                             try {
@@ -292,26 +407,25 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
 
             @Override
             public void onError(int error, String errorMsg) {
-                Log.e("aaaaaaaaaaa","error = "+error+"， errorMsg = "+errorMsg);
             }
         });
     }
 
-    private void saveLocalData(/*JSONObject entity*/String entity){
+    private void saveLocalData(/*JSONObject entity*/String entity) {
         // 保存本地
         SharedPreferences.Editor edit = mSharedPreferences.edit();
         edit.putString(String.format(JSON_KEY, sToChatUserName), entity);
         edit.apply();
     }
 
-    private String getLocalData(){
-        return mSharedPreferences.getString(String.format(JSON_KEY, sToChatUserName),"");
+    private String getLocalData() {
+        return mSharedPreferences.getString(String.format(JSON_KEY, sToChatUserName), "");
     }
 
-    private int getNav(WindowManager wm, View content, Point point){
+    private int getNav(WindowManager wm, View content, Point point) {
         Display display = wm.getDefaultDisplay();
         display.getRealSize(point);
-        if (content.getBottom() == 0){
+        if (content.getBottom() == 0) {
             return 0;
         }
         return point.y - content.getBottom();
@@ -321,17 +435,28 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         EMLog.e(TAG, "onNewIntent");
-        Log.e("aaaaaaaaaaaaaaa","onNewIntent");
+
+        int dialogType = intent.getIntExtra(DIALOG_TYPE_KEY, -1);
+        if (dialogType == DIALOG_TYPE_RETRY){
+            // 显示满意度
+            mCurrentDialogType = DIALOG_TYPE_RETRY;
+            // mEvaluateFlt.setIsAllowClick(false);
+            mEvaluateFlt.setIsAllowClick(true);
+            initRetry(intent);
+            return;
+        }
+
+
         int isActive = intent.getIntExtra(VideoCallWindowService.INTENT_CALLING_TAG,
                 VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE);
 
-        if (mCurrentDialogType == DIALOG_TYPE_SEND || mCurrentDialogType == DIALOG_TYPE_WAIT){
-            if (isActive == VideoCallWindowService.INTENT_CALLING_TAG_PASSIVE_VALUE){
+        if (mCurrentDialogType == DIALOG_TYPE_SEND || mCurrentDialogType == DIALOG_TYPE_WAIT) {
+            if (isActive == VideoCallWindowService.INTENT_CALLING_TAG_PASSIVE_VALUE) {
                 String toChatUserName = intent.getStringExtra(VideoCallWindowService.CURRENT_CHAT_USER_NAME);
                 if (!TextUtils.isEmpty(toChatUserName)
                         && !TextUtils.isEmpty(mToChatUserName)
-                        && mToChatUserName.equals(toChatUserName)){
-                    if (!mIsCreate){
+                        && mToChatUserName.equals(toChatUserName)) {
+                    if (!mIsCreate) {
                         mIsCreate = true;
                         activeVideoResponse(mIsHavPermission, intent);
                     }
@@ -339,10 +464,36 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
             }
         }else {
             // 被动 正在显示默认或重新发送页面，坐席端发送过来请求
-            if (isActive == VideoCallWindowService.INTENT_CALLING_TAG_PASSIVE_VALUE){
-                if (!mIsCreate){
+            if (isActive == VideoCallWindowService.INTENT_CALLING_TAG_PASSIVE_VALUE) {
+                /*if (!mIsCreate){
                     mIsCreate = true;
                     passVideo(FloatWindowManager.getInstance().checkPermission(this), intent);
+                }*/
+
+                /*String toChatUserName = intent.getStringExtra(VideoCallWindowService.CURRENT_CHAT_USER_NAME);
+                if (!TextUtils.isEmpty(toChatUserName)
+                        && !TextUtils.isEmpty(mToChatUserName)
+                        && mToChatUserName.equals(toChatUserName)) {
+                    if (!mIsCreate) {
+                        mIsCreate = true;
+                        activeVideoResponse(mIsHavPermission, intent);
+                    }
+                }
+                if (!mIsCreate) {
+                    mIsCreate = true;
+                    activeVideoResponse(mIsHavPermission, intent);
+                }*/
+
+                activeVideoResponse(mIsHavPermission, intent);
+
+            }else if (isActive == VideoCallWindowService.INTENT_CALLING_TAG_ZUO_XI_ACTIVE_VALUE){
+                // 坐席主动发送邀请
+                if (!mIsCreate) {
+                    mIsCreate = true;
+
+                    mSmg = intent.getStringExtra("msg");
+                    initView();
+                    dialogType(DIALOG_TYPE_NO);
                 }
             }
         }
@@ -352,10 +503,10 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     private void passVideo(boolean checkPermission, Intent intent) {
         EMLog.e(TAG, "被动 正在通话 座席端 -- 访客端");
 
-        if (checkPermission){
-            intent.putExtra("nav_height",mNavHeight);
+        if (checkPermission) {
+            intent.putExtra("nav_height", mNavHeight);
             VideoCallWindowService.show(this, intent);
-        }else {
+        } else {
             CallActivity.show(this, intent);
         }
 
@@ -363,7 +514,7 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     }
 
     private void activeVideo(boolean checkPermission) {
-        EMLog.e(TAG, "主动发起请求 是否有悬浮权限 = "+checkPermission);
+        EMLog.e(TAG, "主动发起请求 是否有悬浮权限 = " + checkPermission);
         VecConfig.newVecConfig().setVecVideo(true);
         sendCmd();
         startTimerOut();
@@ -372,10 +523,10 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     private void activeVideoResponse(boolean isHavPermission, Intent intent) {
         EMLog.e(TAG, "主动发起请求 获取到座席端响应");
         stopTimerOut();
-        if (isHavPermission){
-            intent.putExtra("nav_height",mNavHeight);
+        if (isHavPermission) {
+            intent.putExtra("nav_height", mNavHeight);
             VideoCallWindowService.show(this, mToChatUserName, intent);
-        }else {
+        } else {
             CallActivity.show(this, mToChatUserName, intent);
         }
 
@@ -384,17 +535,23 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
 
     // 发送请求建立视频
     private void sendCmd() {
-        ChatClient.getInstance().callManager().callVecVideo("邀请客服进行实时视频", mToChatUserName);
+        mIsRun = true;
+        EMLog.e(TAG, "发送请求建立视频 sendCmd");
+        Log.e("ppppppppp","发送请求建立视频 sendCmd");
+        ChatClient.getInstance().callManager().callVecVideo(Utils.getString(getApplicationContext(), R.string.vec_agent_to_visitor), mToChatUserName);
+        EMLog.e(TAG, "发送请求建立视频 sendCmd 结束");
     }
 
     private Runnable mCloseTimerOut;
+
     private void startTimerOut() {
-        if (mCloseTimerOut == null){
+        if (mCloseTimerOut == null) {
             mCloseTimerOut = () -> {
-                Log.e("ooooooooooo","挂断");
+                Log.e("aaaaaaaaaa", "挂断");
                 // 超时拒接
                 EMLog.e(TAG, "主动发起请求，坐席端超时，挂断");
                 mIsCreate = false;
+                mIsRun = false;
                 // ChatClient.getInstance().callManager().endCall(0, true);
                 VECKitCalling.endCallFromOff();
                 VecConfig.newVecConfig().setVecVideo(false);
@@ -406,8 +563,8 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         postDelayed(mCloseTimerOut, CLOSE_CALL_TIMEOUT);
     }
 
-    private void stopTimerOut(){
-        if (mCloseTimerOut != null){
+    private void stopTimerOut() {
+        if (mCloseTimerOut != null) {
             removeRunnable(mCloseTimerOut);
         }
     }
@@ -415,42 +572,124 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     @Override
     public void onClick(View view) {
         int id = view.getId();
-        if (id == R.id.typeIv){
+        if (id == R.id.typeIv) {
             // 发起视频之前
-            if (DIALOG_TYPE_DEFAULT == mCurrentDialogType){
-                dialogType(DIALOG_TYPE_SEND);
+            if (DIALOG_TYPE_DEFAULT == mCurrentDialogType) {
+                /*dialogType(DIALOG_TYPE_SEND);
+                activeVideo(mIsHavPermission);*/
+
+                dialogType(DIALOG_TYPE_WAIT);
                 activeVideo(mIsHavPermission);
-            }else if (DIALOG_TYPE_RETRY == mCurrentDialogType){
-                dialogType(DIALOG_TYPE_SEND);
-                activeVideo(mIsHavPermission);
-            }else if (DIALOG_TYPE_WAIT == mCurrentDialogType){
-                Log.e("ooooooooo","wait");
-            }else if (DIALOG_TYPE_SEND == mCurrentDialogType){
+                // requestWait();
+            } else if (DIALOG_TYPE_RETRY == mCurrentDialogType) {
+                // 满意度（特殊情况，会话结束，用户瞬间又点击发起通话，这时满意度页面通知还没过来，当满意度页面通知过来时，就会将状态改变为DIALOG_TYPE_RETRY，其实正在接通排队）
+                // 排队等待时，挂断：分两种情况，1.正在排队挂断。2.待接入时，挂断
+                mIsCreate = false;
+                mIsRun = false;
+                VECKitCalling.endCallFromOff();
+                // finishPage();
+                dialogType(DIALOG_TYPE_END);
+            } else if (DIALOG_TYPE_WAIT == mCurrentDialogType) {
+                Log.e("ooooooooo", "wait");
+                // 排队等待时，挂断：分两种情况，1.正在排队挂断。2.待接入时，挂断
+                mIsCreate = false;
+                mIsRun = false;
+                VECKitCalling.endCallFromOff();
+                // finishPage();
+                dialogType(DIALOG_TYPE_END);
+
+            } else if (DIALOG_TYPE_SEND == mCurrentDialogType) {
                 // 挂断
                 // ChatClient.getInstance().callManager().endVecCall(0, true);
                 VECKitCalling.endCallFromOff();
                 mIsCreate = false;
-                finishPage();
+                mIsRun = false;
+                // finishPage();
+                dialogType(DIALOG_TYPE_END);
+
+            }else if (DIALOG_TYPE_END == mCurrentDialogType){
+                // 重新发起
+                /*dialogType(DIALOG_TYPE_SEND);
+                activeVideo(mIsHavPermission);*/
+                dialogType(DIALOG_TYPE_WAIT);
+                activeVideo(mIsHavPermission);
+                // requestWait();
             }
-        }else if (id == R.id.closeTv){
+        } else if (id == R.id.closeTv) {
+            if (mIsRun){
+                return;
+            }
             // 关闭
             clear();
             finish();
-        }else if (id == R.id.hangupIv){
+        } else if (id == R.id.hangupIv) {
             // 坐席主动发视频邀请，拒接按钮
+            VECKitCalling.endCallFromZuoXi(Utils.getString(getApplicationContext(), R.string.vec_visitor_refuse_video));
+            // 关闭
+            clear();
+            finish();
 
-        }else if (id == R.id.acceptIv){
+        } else if (id == R.id.acceptIv) {
             // 坐席主动发视频邀请，接听按钮
-
+            VECKitCalling.acceptCallFromZuoXi(Utils.getString(getApplicationContext(), R.string.vec_visitor_accept_video));
+        }else if (id == R.id.okEvaluateTv){
+            // 提交满意度评价
+            submitEvaluate();
         }
 
     }
 
+    private void showProgressTv(){
+        if (mProgressTv != null){
+            showAndHidden(mProgressTv,true);
+        }
+    }
+
+    private void hiddenProgressTv(){
+        if (mProgressTv != null){
+            showAndHidden(mProgressTv,false);
+        }
+    }
+
+
+
+    // 满意度提交完成
+    private void evaluateOk() {
+        if (!mIsRun){
+            mCurrentDialogType = DIALOG_TYPE_DEFAULT;
+        }
+
+        mEvaluateFlt.setIsAllowClick(true);
+        /*if (!mIsRun){
+            showAndHidden(mCloseTv, true);
+        }*/
+        showAndHidden(mEvaluateTv, true);
+        // 3s 之后自动关闭
+        postDelayed(() -> {
+            if (isFinishing()){
+                return;
+            }
+
+            showAndHidden(mEvaluateFlt, false);
+            /*clear();
+            finish();*/
+        }, 3000);
+    }
+
+    // 满意度提交失败
+    private void evaluateError() {
+        showToast(Utils.getString(getApplicationContext(), R.string.vec_request_fail));
+        mCurrentDialogType = DIALOG_TYPE_DEFAULT;
+        mEvaluateFlt.setIsAllowClick(true);
+        showAndHidden(mCloseTv, true);
+        showAndHidden(mEvaluateTv, false);
+    }
+
     private void checkPermission() {
-        if (!FloatWindowManager.getInstance().checkPermission(this)){
+        if (!FloatWindowManager.getInstance().checkPermission(this)) {
             mIsHavPermission = false;
             FloatWindowManager.getInstance().applyPermission(this, confirm -> mClickRequestPermission = confirm);
-        }else {
+        } else {
             mIsHavPermission = true;
         }
     }
@@ -458,48 +697,53 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     @Override
     protected void onStart() {
         super.onStart();
-        if (mClickRequestPermission){
+        if (mClickRequestPermission) {
             mIsHavPermission = FloatWindowManager.getInstance().checkPermission(this);
         }
     }
 
     private void dialogType(int type) {
         mCurrentDialogType = type;
-        if (type == DIALOG_TYPE_DEFAULT){
+        if (type == DIALOG_TYPE_DEFAULT) {
             // 发起视频之前
             showBackground(mWaitingIV);
             dialogTypeDefault();
-        }else if (type == DIALOG_TYPE_SEND){
+        } else if (type == DIALOG_TYPE_SEND) {
             // 开始发起视频
             showBackground(mCallingIV);
             dialogTypeSend();
-        }else if (type == DIALOG_TYPE_WAIT){
+        } else if (type == DIALOG_TYPE_WAIT) {
             // 发起视频，等待人数
             showBackground(mQueuingIV);
             dialogTypeWait();
-        }else if (type == DIALOG_TYPE_RETRY){
-            // 重新发起
+        } else if (type == DIALOG_TYPE_RETRY) {
+            // 满意度评价
             showBackground(mEndingIV);
             dialogTypeRetry();
-        }else if (type == DIALOG_TYPE_PASSIVE){
-            // 座席端发起视频
-            dialogTypePassive();
+            initRetry(getIntent());
+        }else if (type == DIALOG_TYPE_END){
+            // 挂断之后显示的页面
+            showBackground(mEndingIV);
+            dialogTypeEnd();
+        }else if(type == DIALOG_TYPE_NO){
+            // 默认坐席主动发送视频邀请
+            showBackground(mCallingIV);
+            dialogTypeNo();
         }
     }
 
-    private void showBackground(ImageView imageView){
+    private void showBackground(ImageView imageView) {
         showAndHidden(mWaitingIV, mWaitingIV == imageView);
         showAndHidden(mCallingIV, mCallingIV == imageView);
         showAndHidden(mEndingIV, mEndingIV == imageView);
         showAndHidden(mQueuingIV, mQueuingIV == imageView);
     }
 
-    private void netWork(){
+    private void netWork() {
         request(json -> {
             EntityBean entityBean = new EntityBean(json);
-            mVideoStyleBean = entityBean.getVideoStyleBean();
+            mVideoStyleBean = entityBean.getVideoStyleBean(getApplicationContext());
             changeBackgroundImage();
-            Log.e("aaaaaaaaaa","请求网络成功 = "+json);
         });
     }
 
@@ -512,39 +756,39 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         loadImage(mEndingIV, path, mVideoStyleBean.getStyleSettings().getEndingBackgroundPic());
     }
 
-    private void loadImage(ImageView imageView, String saveLocalPath, String url){
-        if (imageView == null){
+    private void loadImage(ImageView imageView, String saveLocalPath, String url) {
+        if (imageView == null) {
             return;
         }
 
-        if (!TextUtils.isEmpty(url)){
+        if (!TextUtils.isEmpty(url)) {
             saveLocalPath = saveLocalPath.concat("/vec");
             String fileName = url.substring(url.lastIndexOf("/") + 1);
             File file = new File(saveLocalPath, fileName);
-            if (file.exists()){
+            if (file.exists()) {
                 // 加载本地图片
-                if (isFinishing()){
+                if (isFinishing()) {
                     return;
                 }
                 /*Bitmap bitmap= BitmapFactory.decodeFile(file.getAbsolutePath());
                 imageView.setImageBitmap(bitmap);
                 bitmap.recycle();*/
                 imageView.setImageURI(Uri.fromFile(file));
-            }else {
+            } else {
                 File search = new File(saveLocalPath);
-                if (!search.exists()){
+                if (!search.exists()) {
                     //noinspection ResultOfMethodCallIgnored
                     search.mkdirs();
                 }
 
-                if (isFinishing()){
+                if (isFinishing()) {
                     return;
                 }
                 // 请求网络，保存本地图片
                 NetWork.loadImage(file.getPath(), url, new NetWork.CallBack() {
                     @Override
                     public void ok(String url) {
-                        if (isFinishing()){
+                        if (isFinishing()) {
                             return;
                         }
                         runOnUiThread(() -> imageView.setImageURI(Uri.fromFile(new File(url))));
@@ -555,13 +799,60 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
                     }
                 });
             }
-        }else {
-            imageView.setImageResource(R.drawable.dialog_corners_bg);
+        } else {
+            // imageView.setImageResource(R.drawable.dialog_corners_bg);
+            imageView.setBackgroundColor(getResources().getColor(R.color.dialog_corners_bg));
+        }
+    }
+
+    private void loadAvatarImage(ImageView imageView, String saveLocalPath, String url) {
+        if (imageView == null) {
+            return;
+        }
+
+        if (!TextUtils.isEmpty(url)) {
+            saveLocalPath = saveLocalPath.concat("/vec");
+            File file = new File(saveLocalPath, String.format("avatar_%s",ChatClient.getInstance().tenantId()));
+            if (file.exists()) {
+                // 加载本地图片
+                if (isFinishing()) {
+                    return;
+                }
+                /*Bitmap bitmap= BitmapFactory.decodeFile(file.getAbsolutePath());
+                imageView.setImageBitmap(bitmap);
+                bitmap.recycle();*/
+                imageView.setImageURI(Uri.fromFile(file));
+            } else {
+                File search = new File(saveLocalPath);
+                if (!search.exists()) {
+                    //noinspection ResultOfMethodCallIgnored
+                    search.mkdirs();
+                }
+
+                if (isFinishing()) {
+                    return;
+                }
+                // 请求网络，保存本地图片
+                NetWork.loadImage(file.getPath(), url, new NetWork.CallBack() {
+                    @Override
+                    public void ok(String url) {
+                        if (isFinishing()) {
+                            return;
+                        }
+                        runOnUiThread(() -> imageView.setImageURI(Uri.fromFile(new File(url))));
+                    }
+
+                    @Override
+                    public void fail(int code, String error) {
+                    }
+                });
+            }
         }
     }
 
     private void initStyle(@NonNull Intent intent, boolean isActive) throws JSONException {
-        if (isActive){
+        // 背景视图倒角
+        /*if (isActive) {
             mWaitingIV = $(R.id.waitingIV);
             clipToOutline(mWaitingIV);
             mCallingIV = $(R.id.callingIV);
@@ -570,33 +861,33 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
             clipToOutline(mQueuingIV);
             mEndingIV = $(R.id.endingIV);
             clipToOutline(mEndingIV);
-        }
+        }*/
 
         boolean loadLocalStyle = intent.getBooleanExtra(LOAD_LOCAL_STYLE, false);
 
         // 本地取值
         String localData = getLocalData();
-        if (!TextUtils.isEmpty(localData)){
+        if (!TextUtils.isEmpty(localData)) {
             EntityBean entityBean = new EntityBean(localData);
-            mVideoStyleBean = entityBean.getVideoStyleBean();
+            mVideoStyleBean = entityBean.getVideoStyleBean(getApplicationContext());
             changeBackgroundImage();
-        }else {
-            mVideoStyleBean = VideoStyleBean.create();
+        } else {
+            mVideoStyleBean = VideoStyleBean.create(getApplicationContext());
         }
         String jsonStyle = intent.getStringExtra(VIDEO_STYLE_KEY);
-        Log.e("aaaaaaaaaaaa","传递值 = "+jsonStyle);
-        if (!TextUtils.isEmpty(jsonStyle)){
+        Log.e("aaaaaaaaaaaa", "传递值 = " + jsonStyle);
+        if (!TextUtils.isEmpty(jsonStyle)) {
             initStyleFromIntent(jsonStyle);
-        }else {
-            if (!loadLocalStyle){
+        } else {
+            if (!loadLocalStyle) {
                 netWork();
-            }else {
-                Log.e("aaaaaaaaaa","加载本地样式");
+            } else {
+                Log.e("aaaaaaaaaa", "加载本地样式");
             }
         }
     }
 
-    private void clipToOutline(View surfaceView){
+    private void clipToOutline(View surfaceView) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             surfaceView.setOutlineProvider(new ViewOutlineProvider() {
                 @Override
@@ -608,7 +899,7 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
                     Rect selfRect = new Rect(leftMargin, topMargin,
                             rect.right - rect.left - leftMargin,
                             rect.bottom - rect.top - topMargin);
-                    outline.setRoundRect(selfRect, dp2px(16));
+                    outline.setRoundRect(selfRect, dp2px(8));
                 }
             });
             surfaceView.setClipToOutline(true);
@@ -623,15 +914,12 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     private void initStyleFromIntent(String jsonStyle) {
         try {
             // 整体数据
-            if (!getLocalData().equals(jsonStyle)){
-                Log.e("aaaaaaaaaaaa","数据不等 = "+jsonStyle);
+            if (!getLocalData().equals(jsonStyle)) {
                 // 改变数据
                 saveLocalData(jsonStyle);
                 EntityBean entityBean = new EntityBean(jsonStyle);
-                mVideoStyleBean = entityBean.getVideoStyleBean();
+                mVideoStyleBean = entityBean.getVideoStyleBean(getApplicationContext());
                 changeBackgroundImage();
-            }else {
-                Log.e("aaaaaaaaaaaa","数据相等");
             }
         } catch (JSONException e) {
             e.printStackTrace();
@@ -640,9 +928,14 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
 
 
     private void initView() {
+        mPhotoIv = $(R.id.photoIv);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            clip($(R.id.photoIv), 50);
+            clip(mPhotoIv, 50);
         }
+        // 头像
+        mPhotoIv.setBackgroundResource(R.drawable.wait_icon);
+        loadAvatarImage(mPhotoIv, getCacheDir().toString(), VecConfig.newVecConfig().getAvatarImage());
+
         mCloseTv = $(R.id.closeTv);
         mNameTv = $(R.id.nameTv);
         mContentTv = $(R.id.contentTv);
@@ -652,19 +945,9 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         mTypeIv.setOnClickListener(this);
 
         mContent = getWindow().getDecorView().findViewById(android.R.id.content);
-        mWm = (WindowManager)getSystemService(Context.WINDOW_SERVICE);
+        mWm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
         mPoint = new Point();
         mContent.getViewTreeObserver().addOnGlobalLayoutListener(mOnGlobalLayoutListener);
-    }
-
-    private void dialogTypePassive(){
-        showAndHidden(mCloseTv, false);
-        showAndHidden(mTypeIv, false);
-        showAndHidden(mPassiveLlt, true);
-
-        mNameTv.setText(TextUtils.isEmpty(VecConfig.newVecConfig().getUserName()) ? "环信" : VecConfig.newVecConfig().getUserName());
-        mContentTv.setText(mVideoStyleBean.getStyleSettings().getCallingPrompt());
-        mTypeTv.setText("挂断");
     }
 
     private void dialogTypeRetry() {
@@ -672,56 +955,93 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         showAndHidden(mTypeIv, true);
         showAndHidden(mCloseTv, true);
         // mNameTv.setText("环信");
-        mNameTv.setText(TextUtils.isEmpty(VecConfig.newVecConfig().getUserName()) ? "环信" : VecConfig.newVecConfig().getUserName());
+        mNameTv.setText(VecConfig.newVecConfig().getTenantName());
         mContentTv.setText(mVideoStyleBean.getStyleSettings().getEndingPrompt());
         mTypeIv.setImageResource(R.drawable.em_icon_call_accept);
-        mTypeTv.setText("重新发起");
+        mTypeTv.setText(Utils.getString(getApplicationContext(), R.string.vec_satisfaction_evaluation));
+    }
+
+    private void dialogTypeEnd() {
+        showAndHidden(mPassiveLlt, false);
+        showAndHidden(mTypeIv, true);
+        showAndHidden(mCloseTv, true);
+        // mNameTv.setText("环信");
+        mNameTv.setText(VecConfig.newVecConfig().getTenantName());
+        mContentTv.setText(mVideoStyleBean.getStyleSettings().getEndingPrompt());
+        mTypeIv.setImageResource(R.drawable.em_icon_call_accept);
+        // 重新发起
+        mTypeTv.setText(getResources().getString(R.string.vec_again_calling));
     }
 
     private void dialogTypeWait() {
         showAndHidden(mPassiveLlt, false);
         showAndHidden(mTypeIv, true);
-        showAndHidden(mCloseTv, false);
+        showAndHiddenInvisible(mCloseTv, false);
         // mNameTv.setText("客服花花");
-        mNameTv.setText(TextUtils.isEmpty(VecConfig.newVecConfig().getUserName()) ? "客服花花" : VecConfig.newVecConfig().getUserName());
+        mNameTv.setText(VecConfig.newVecConfig().getTenantName());
         mContentTv.setText(mVideoStyleBean.getStyleSettings().getQueuingPrompt());
         mTypeIv.setImageResource(R.drawable.em_icon_call_hangup);
-        mTypeTv.setText("挂断");
+        // 挂断
+        mTypeTv.setText(getResources().getString(R.string.vec_hang_up));
+    }
+
+    private void dialogTypeWaitUpdateUi(String content){
+        showAndHidden(mPassiveLlt, false);
+        showAndHidden(mTypeIv, true);
+        showAndHiddenInvisible(mCloseTv, false);
+        // mNameTv.setText("客服花花");
+        mNameTv.setText(VecConfig.newVecConfig().getTenantName());
+        mContentTv.setText(content);
+        mTypeIv.setImageResource(R.drawable.em_icon_call_hangup);
+        // 挂断
+        mTypeTv.setText(getResources().getString(R.string.vec_hang_up));
     }
 
     private void dialogTypeSend() {
         showAndHidden(mPassiveLlt, false);
         showAndHidden(mTypeIv, true);
-        showAndHidden(mCloseTv, false);
+        showAndHiddenInvisible(mCloseTv, false);
         // mNameTv.setText("环信");
-        mNameTv.setText(TextUtils.isEmpty(VecConfig.newVecConfig().getUserName()) ? "环信" : VecConfig.newVecConfig().getUserName());
+        mNameTv.setText(VecConfig.newVecConfig().getTenantName());
         mContentTv.setText(mVideoStyleBean.getStyleSettings().getCallingPrompt());
         mTypeIv.setImageResource(R.drawable.em_icon_call_hangup);
-        mTypeTv.setText("挂断");
+        // 挂断
+        mTypeTv.setText(getResources().getString(R.string.vec_hang_up));
     }
 
     private void dialogTypeDefault() {
         showAndHidden(mPassiveLlt, false);
         showAndHidden(mTypeIv, true);
         showAndHidden(mCloseTv, true);
-        // mNameTv.setText("环信");
-        mNameTv.setText(TextUtils.isEmpty(VecConfig.newVecConfig().getUserName()) ? "环信" : VecConfig.newVecConfig().getUserName());
+        mNameTv.setText(VecConfig.newVecConfig().getTenantName());
         mContentTv.setText(mVideoStyleBean.getStyleSettings().getWaitingPrompt());
         mTypeIv.setImageResource(R.drawable.em_icon_call_accept);
-        mTypeTv.setText("发起");
+        // 发起通话
+        mTypeTv.setText(getResources().getString(R.string.vec_initiate_call));
+    }
+
+    private void dialogTypeNo() {
+        showAndHidden(mTypeIv, false);
+        showAndHidden(mTypeTv, false);
+        showAndHiddenInvisible(mCloseTv, false);
+
+        showAndHidden(mPassiveLlt, true);
+        mNameTv.setText(getResources().getString(R.string.vec_initiate_call));
+        mNameTv.setText(TextUtils.isEmpty(VecConfig.newVecConfig().getUserName()) ? getResources().getString(R.string.vec_initiate_call) : VecConfig.newVecConfig().getUserName());
+        mContentTv.setText(TextUtils.isEmpty(mSmg) ? Utils.getString(getApplicationContext(), R.string.vec_agent_invitation) : mSmg);
     }
 
     @Override
     public void onBackPressed() {
         if (mCurrentDialogType == DIALOG_TYPE_SEND
-                || mCurrentDialogType == DIALOG_TYPE_WAIT){
+                || mCurrentDialogType == DIALOG_TYPE_WAIT || mCurrentDialogType == DIALOG_TYPE_RETRY) {
             return;
         }
         super.onBackPressed();
         clear();
     }
 
-    private void finishPage(){
+    private void finishPage() {
         postDelayed(() -> {
             clear();
             finish();
@@ -729,12 +1049,24 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     }
 
 
-
-    private void clear(){
+    private void clear() {
+        WaitNetworkUtils.newWaitNetworkUtils().clear();
         stopTimerOut();
+        Utils.clearDegreeTag(mDegreeBeanMap);
         AgoraMessage.newAgoraMessage().unRegisterIEndCallback(getClass().getSimpleName());
+        if (mRatingBar != null){
+            // mRatingBar.setOnRatingBarChangeListener(null);
+            mRatingBar.setOnRatingChangeListener(null);
+        }
+
+        if (mEnquiryOptionsBean != null){
+            mEnquiryOptionsBean.enquiryOptions.clear();
+            mEnquiryOptionsBean = null;
+        }
+        removeHandlerAll();
         mToChatUserName = null;
         mIsCreate = false;
+        mIsRun = false;
         mClickRequestPermission = false;
     }
 
@@ -743,7 +1075,227 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         finishPage();
     }
 
-    interface Callback{
+    @Override
+    public void onInitWaitPage(int callType, String rtcSessionId, String tenantId) {
+        EMLog.e(TAG, "访客主动邀请坐席 onInitWaitPage callType = "+callType);
+        Log.e("ppppppppp","onInitWaitPage = "+callType);
+        if (callType == 0){
+            // 访客主动邀请坐席
+            requestWait(rtcSessionId, tenantId);
+        }
+    }
+
+    // 等待
+    private void requestWait(String rtcSessionId, String tenantId) {
+        WaitNetworkUtils.newWaitNetworkUtils().execute(rtcSessionId, tenantId, new WaitNetworkUtils.IWaitCallBack() {
+            @Override
+            public void onWaitData(boolean waitingFlag, String visitorWaitingNumber) {
+                EMLog.e(TAG, "访客主动邀请坐席 onInitWaitPage onWaitData waitingFlag = "+waitingFlag);
+                EMLog.e(TAG, "访客主动邀请坐席 onInitWaitPage onWaitData visitorWaitingNumber = "+visitorWaitingNumber);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isFinishing()){
+                            return;
+                        }
+                        if (mCurrentDialogType == DIALOG_TYPE_END){
+                            return;
+                        }
+                        dialogTypeWaitUpdateUi(visitorWaitingNumber);
+                    }
+                });
+            }
+
+            @Override
+            public void onWaitError(String errorMsg) {
+                EMLog.e(TAG, "访客主动邀请坐席 onInitWaitPage onWaitError errorMsg = "+errorMsg);
+            }
+        });
+    }
+
+    private Map<Integer, ArrayList<FlowBean>> mDegreeBeanMap = new HashMap<>();
+    private EnquiryOptionsBean mEnquiryOptionsBean;
+    // 默认是否开启备注必填
+    private boolean mIsEnquiryCommentEnable;
+    // 解析满意度评价数据
+    private void initRetry(Intent intent) {
+        try {
+            // 满意度评价
+            String content = intent.getStringExtra("content");
+            mEnquiryOptionsBean = EnquiryOptionsBean.get(content);
+
+            JSONObject jsonObject = new JSONObject(content);
+            Utils.getDegreeTag(mDegreeBeanMap, jsonObject, 5);
+            // showAndHiddenInvisible(mCloseTv, false);
+            showAndHiddenInvisible(mCloseTv, true);
+            showAndHidden(mEvaluateFlt, true);
+            mTitleTv.setText(Utils.getEnquiryInviteMsg(mEnquiryOptionsBean));
+            mEvaluateTv.setText(Utils.getEnquirySolveMsg(mEnquiryOptionsBean));
+
+            // 默认是否显示5星好评
+            if (Utils.getEnquiryDefaultShow5Score(mEnquiryOptionsBean)){
+                mCurrentRating = 5;
+                //mRatingBar.setRating(5);
+                mRatingBar.setStar(5);
+                mFlowTagLayout.addContent(Utils.getDegreeTags(mDegreeBeanMap, 5));
+            }else {
+                mCurrentRating = 0;
+                //mRatingBar.setRating(0);
+                mRatingBar.setStar(0);
+                showAndHidden(mFlowTagLayout, false);
+            }
+
+            mIsEnquiryCommentEnable = Utils.getEnquiryCommentEnable(mEnquiryOptionsBean);
+            showAndHidden(mEtView, mIsEnquiryCommentEnable);
+
+        }catch (Exception e){
+            e.printStackTrace();
+
+        }
+    }
+
+    // 默认选择几颗星
+    private int mCurrentRating;
+    /*@Override
+    public void onRatingChanged(RatingBar ratingBar, float rating, boolean fromUser) {
+        if (rating < 1.0f) {
+            mCurrentRating = 0;
+            ratingBar.setRating(0);
+        }
+        mCurrentRating = (int)rating;
+
+        mShowTv.setText(Utils.getText(getApplicationContext(), (int)rating));
+        if (mFlowTagLayout != null){
+            showAndHidden(mFlowTagLayout, true);
+            mFlowTagLayout.addContent(Utils.getDegreeTags(mDegreeBeanMap, (int)rating));
+        }
+    }*/
+
+    @Override
+    public void onRatingChange(float rating) {
+        if (rating < 1.0f) {
+            mCurrentRating = 0;
+            //ratingBar.setRating(0);
+            mRatingBar.setStar(0);
+        }
+        mCurrentRating = (int)rating;
+
+        mShowTv.setText(Utils.getText(getApplicationContext(), (int)rating));
+        if (mFlowTagLayout != null){
+            showAndHidden(mFlowTagLayout, true);
+            mFlowTagLayout.addContent(Utils.getDegreeTags(mDegreeBeanMap, (int)rating));
+        }
+    }
+
+    // 提交满意度评价
+    private void submitEvaluate() {
+        List<DegreeBean> content = mFlowTagLayout.getContent();
+        if (checkEvaluate(content)){
+            showProgressTv();
+            String comment = mEtView.getText().toString();
+
+
+            SubmitEvaluationBean submitEvaluationBean = new SubmitEvaluationBean(
+                    mEnquiryOptionsBean.rtcSessionId, mEnquiryOptionsBean.visitorUserId,
+                    mCurrentRating, comment, content
+            );
+
+            Gson gson = new Gson();
+            String jsonData = gson.toJson(submitEvaluationBean);
+            AgoraMessage.asyncSubmitEvaluate(ChatClient.getInstance().tenantId(),
+                    jsonData, new ValueCallBack<String>() {
+                        @Override
+                        public void onSuccess(String value) {
+                            Log.e("rrrrrrrrrrrr","value = "+value);
+                            if (isFinishing()){
+                                return;
+                            }
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    hiddenProgressTv();
+                                    if (value.contains("OK")){
+                                        evaluateOk();
+                                    }else {
+                                        evaluateError();
+                                    }
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onError(int error, String errorMsg) {
+                            Log.e("rrrrrrrrrrrr","errorMsg = "+errorMsg);
+                            Log.e("rrrrrrrrrrrr","error = "+error);
+                            if (isFinishing()){
+                                return;
+                            }
+
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    hiddenProgressTv();
+                                    evaluateError();
+                                }
+                            });
+                        }
+                    });
+        }
+    }
+
+    private boolean checkEvaluate(List<DegreeBean> content) {
+        if (mCurrentRating == 0){
+            showToast(Utils.getString(getApplicationContext(), R.string.vec_select_star_evaluation));
+            return false;
+        }
+
+        // 是否选择标签
+        if (mCurrentRating == 1 || mCurrentRating == 2 || mCurrentRating == 3){
+            if (Utils.getDegreeTagsEnable(mEnquiryOptionsBean, mCurrentRating)){
+                // 判断是否选中标签
+                if (content.size() == 0){
+                    showToast(Utils.getString(getApplicationContext(), R.string.vec_select_tag));
+                    return false;
+                }
+            }
+        }
+
+        // 默认是否开启备注必填
+        if (mIsEnquiryCommentEnable){
+            showAndHidden(mEtView, true);
+            if (mCurrentRating == 1 || mCurrentRating == 2 || mCurrentRating == 3){
+                if (Utils.getDegreeEnquiryCommentEnable(mEnquiryOptionsBean, mCurrentRating)){
+                    if (TextUtils.isEmpty(mEtView.getText().toString().trim())){
+                        showToast(Utils.getString(getApplicationContext(), R.string.vec_remarks));
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    private void showToast(String content){
+        Toast.makeText(this, content, Toast.LENGTH_LONG).show();
+    }
+
+    interface Callback {
         void run(String json) throws JSONException;
     }
+
+    private void getTenantIdFunctionIcons(){
+        // 动态获取功能按钮，在视频页面使用到
+        AgoraMessage.asyncGetTenantIdFunctionIcons(ChatClient.getInstance().tenantId(), new ValueCallBack<List<FunctionIconItem>>() {
+            @Override
+            public void onSuccess(List<FunctionIconItem> value) {
+                FlatFunctionUtils.get().setIconItems(value);
+            }
+
+            @Override
+            public void onError(int error, String errorMsg) {
+
+            }
+        });
+    }
+
 }

@@ -2,6 +2,7 @@ package com.easemob.veckit.agora;
 
 
 import android.content.Context;
+import android.util.DisplayMetrics;
 import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
@@ -76,7 +77,6 @@ public class AgoraRtcEngine {
         mEngineEventHandler = handler;
         try {
             // // reason：5 --> 远端用户禁用 6 --> 远端用户恢复
-            android.util.Log.e("ppppppppp","appId = "+appId);
             mEngine = RtcEngine.create(context.getApplicationContext(), appId, mEngineEventHandler);
         } catch (Exception e) {
             e.printStackTrace();
@@ -111,6 +111,39 @@ public class AgoraRtcEngine {
 
     public TextureView createTextureView(){
         return RtcEngine.CreateTextureView(mContext.getApplicationContext());
+    }
+
+    /**
+     * 检查设备是否支持打开闪光灯
+     * @return boolean
+     */
+    public boolean isCameraTorchSupported(){
+        return mEngine.isCameraTorchSupported();
+    }
+
+    /**
+     * 设置是否打开闪光灯
+     * @param isOn true / false
+     */
+    public void setCameraTorchOn(boolean isOn){
+        mEngine.setCameraTorchOn(isOn);
+    }
+
+    /**
+     * 检测设备是否支持手动对焦功能
+     * @return boolean
+     */
+    public boolean isCameraFocusSupported(){
+        return mEngine.isCameraFocusSupported();
+    }
+
+    /**
+     * 设置手动对焦位置，并触发对焦
+     * @param positionX x方向位置
+     * @param positionY y方向位置
+     */
+    public void setCameraFocusPositionInPreview(float positionX, float positionY){
+        mEngine.setCameraFocusPositionInPreview(positionX, positionY);
     }
 
     /**
@@ -150,12 +183,12 @@ public class AgoraRtcEngine {
             );
         }
 
-        Log.e("pppppppppp","mEngine = "+mEngine);
         mEngine.setChannelProfile(mProfile);
         mEngine.setClientRole(mRole);
         mEngine.enableVideo();
 
         mEngine.setVideoEncoderConfiguration(mConfig);
+        //mVideoEncodingDimension
 
         if (mOptions != null){
             // 添加视频水印
@@ -218,8 +251,14 @@ public class AgoraRtcEngine {
         return mEngine.joinChannel(token, channelName, optionalInfo, optionalUid, options);
     }
 
+    /*private VideoEncoderConfiguration.VideoDimensions getVideoEncodingDimensionObject() {
+        DisplayMetrics displayMetrics = mContext.getResources().getDisplayMetrics();
+        return new VideoEncoderConfiguration.VideoDimensions(displayMetrics.widthPixels, displayMetrics.heightPixels);
+    }*/
+
     private VideoEncoderConfiguration.VideoDimensions getVideoEncodingDimensionObject() {
-        return VD_640x360;
+        DisplayMetrics displayMetrics = mContext.getResources().getDisplayMetrics();
+        return new VideoEncoderConfiguration.VideoDimensions(displayMetrics.widthPixels, displayMetrics.heightPixels);
     }
 
     /**
@@ -504,6 +543,12 @@ public class AgoraRtcEngine {
         return mEngine.leaveChannel();
     }
 
+
+    // 分享桌面
+    /*public void shareWindows(ScreenSharingClient client, Context context, String appId, String token, String channelName, int uid, VideoEncoderConfiguration configurations){
+        client.start(context, appId, token,
+                channelName, uid, configurations);
+    }*/
 
 
     public static AgoraRtcEngineConfigure builder(){

@@ -4,12 +4,21 @@ import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.text.TextUtils;
 import android.util.Base64;
-import android.util.Log;
 import android.util.TypedValue;
 
+import com.easemob.veckit.R;
+import com.easemob.veckit.bean.EnquiryOptionsBean;
+import com.easemob.veckit.bean.OptionBean;
+import com.easemob.veckit.ui.flow.FlowBean;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import com.hyphenate.helpdesk.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -17,18 +26,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 
-import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.KeyGenerator;
-import javax.crypto.Mac;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -73,6 +75,10 @@ public class Utils {
         return vecPath;
     }
 
+    public static int dp2px(Context context, float dpValue) {
+        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dpValue, context.getResources().getDisplayMetrics());
+    }
+
     public static int getThemePrimaryColor(Context context) {
         TypedValue typedValue = new TypedValue();
         context.getTheme().resolveAttribute(android.R.attr.colorPrimary, typedValue, true);
@@ -115,21 +121,12 @@ public class Utils {
         return stateHeight;
     }
 
-    /**
-     * 说明: AES256加密
-     *
-     * @param stringToEncode
-     *            明文
-     * @param keyString
-     *            密钥
-     * @return Bses64格式密文
-     */
     public static String AES256Encode(String stringToEncode, String keyString)
             throws NullPointerException {
-        if (keyString.length() == 0 || keyString == null) {
+        if (TextUtils.isEmpty(keyString)) {
             return null;
         }
-        if (stringToEncode.length() == 0 || stringToEncode == null) {
+        if (TextUtils.isEmpty(stringToEncode)) {
             return null;
         }
         try {
@@ -140,13 +137,14 @@ public class Utils {
             IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
             Cipher cipher = Cipher.getInstance("AES");
             cipher.init(Cipher.ENCRYPT_MODE, skeySpec, ivParameterSpec);
-            String encrypedValue = Base64.encodeToString(cipher.doFinal(data),
-                    Base64.DEFAULT);
-            return encrypedValue;
+            /*String encrypedValue = Base64.encodeToString(cipher.doFinal(data),
+                    Base64.DEFAULT);*/
+            return bytes2Hex(cipher.doFinal(data));
         } catch (Exception e) {
             e.printStackTrace();
+            Log.e("uuuuuuuuu","error = "+e.toString());
         }
-        return "";
+        return null;
     }
 
     /**
@@ -160,11 +158,10 @@ public class Utils {
      * @return String格式明文
      */
     public static String AES256Decrypt(String text, String keyString) {
-        // byte[] rawKey = getRawKey(key);
-        if (keyString.length() == 0 || keyString == null) {
+        if (TextUtils.isEmpty(keyString)) {
             return null;
         }
-        if (text.length() == 0 || text == null) {
+        if (TextUtils.isEmpty(text)) {
             return null;
         }
         try {
@@ -172,27 +169,19 @@ public class Utils {
             final byte[] iv = new byte[16];
             Arrays.fill(iv, (byte) 0x00);
             IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
-            byte[] data = Base64.decode(text, Base64.DEFAULT);
+            // byte[] data = Base64.decode(text, Base64.DEFAULT);
+            byte[] data = toByte(text);
             Cipher cipher = Cipher.getInstance("AES");
             cipher.init(Cipher.DECRYPT_MODE, key, ivParameterSpec);
-            byte[] decrypedValueBytes = (cipher.doFinal(data));
-            String decrypedValue = new String(decrypedValueBytes, "UTF-8");
-            return decrypedValue;
+            byte[] decrypedValueBytes = cipher.doFinal(data);
+            return new String(decrypedValueBytes, "UTF-8");
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        return "";
+        return null;
     }
 
-    /**
-     *
-     * 说明 :将密钥转行成SecretKeySpec格式
-     *
-     * @param password
-     *            16进制密钥
-     * @return SecretKeySpec格式密钥
-     */
     private static SecretKeySpec getKey(String password)
             throws UnsupportedEncodingException {
         // 如果为128将长度改为128即可
@@ -201,11 +190,9 @@ public class Utils {
         // explicitly fill with zeros
         Arrays.fill(keyBytes, (byte) 0x0);
         byte[] passwordBytes = toByte(password);
-        int length = passwordBytes.length < keyBytes.length ? passwordBytes.length
-                : keyBytes.length;
+        int length = Math.min(passwordBytes.length, keyBytes.length);
         System.arraycopy(passwordBytes, 0, keyBytes, 0, length);
-        SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
-        return key;
+        return new SecretKeySpec(keyBytes, "AES");
     }
 
     /**
@@ -242,5 +229,212 @@ public class Utils {
             result[i] = Integer.valueOf(hexString.substring(2 * i, 2 * i + 2),
                     16).byteValue();
         return result;
+    }
+
+    private static void getDegreeFromTag(Map<Integer, ArrayList<FlowBean>> degreeBeanMap, JSONObject enquiryTags, String name) throws JSONException {
+        ArrayList<FlowBean> arrayList = new ArrayList<>();
+        if (enquiryTags.has(name)){
+            JSONArray jsonArray = enquiryTags.getJSONArray(name);
+            for (int i = 0; i < jsonArray.length(); i++){
+                JSONObject tag = (JSONObject) jsonArray.get(i);
+                int id = tag.getInt("id");
+                String tenantId = tag.getString("tenantId");
+                int score = tag.getInt("score");
+                String tagName = tag.getString("tagName");
+                String createDateTime = tag.getString("createDateTime");
+                String updateDateTime = tag.getString("updateDateTime");
+                arrayList.add(new FlowBean(id, tenantId, score, tagName, createDateTime, updateDateTime));
+            }
+        }
+        degreeBeanMap.put(Integer.valueOf(name), arrayList);
+    }
+
+    public static void getDegreeTag(Map<Integer, ArrayList<FlowBean>> degreeBeanMap, JSONObject jsonObject, int num){
+        clearDegreeTag(degreeBeanMap);
+        try {
+            if (!jsonObject.has("enquiryTags")){
+                return;
+            }
+            JSONObject enquiryTags = jsonObject.getJSONObject("enquiryTags");
+            for (int i = 1; i <= num; i++){
+                getDegreeFromTag(degreeBeanMap, enquiryTags, String.valueOf(i));
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void clearDegreeTag(Map<Integer, ArrayList<FlowBean>> degreeBeanMap){
+        if (degreeBeanMap == null){
+            return;
+        }
+        for (ArrayList<FlowBean> arrayList : degreeBeanMap.values()){
+            arrayList.clear();
+        }
+        degreeBeanMap.clear();
+    }
+
+    public static ArrayList<FlowBean> getDegreeTags(Map<Integer, ArrayList<FlowBean>> degreeBeanMap, int tag){
+        if (degreeBeanMap == null){
+            return new ArrayList<>();
+        }
+
+        if (tag > degreeBeanMap.size()){
+            tag = degreeBeanMap.size();
+        }
+
+        if (tag < 0){
+            tag = 0;
+        }
+
+        if (degreeBeanMap.containsKey(tag)){
+            return degreeBeanMap.get(tag);
+        }
+        return new ArrayList<>();
+    }
+
+    public static String getText(Context context, int rating) {
+        if (rating == 1){
+            return Utils.getString(context, R.string.vec_star_one);
+        }else if (rating == 2){
+            return Utils.getString(context, R.string.vec_star_two);
+        }else if (rating == 3){
+            return Utils.getString(context, R.string.vec_star_three);
+        }else if (rating == 4){
+            return Utils.getString(context, R.string.vec_star_four);
+        }else {
+            return Utils.getString(context, R.string.vec_star_five);
+        }
+    }
+
+    // 获取：文案设置
+    // 邀请评价
+    public static String getEnquiryInviteMsg(EnquiryOptionsBean enquiryOptionsBean){
+        if (enquiryOptionsBean == null){
+            return "";
+        }
+        ArrayList<OptionBean> enquiryOptions = enquiryOptionsBean.enquiryOptions;
+        for (OptionBean bean : enquiryOptions){
+            if ("EnquiryInviteMsg".equalsIgnoreCase(bean.optionName)){
+                return bean.optionValue;
+            }
+        }
+
+        return "";
+    }
+
+    // 获取：文案设置
+    // 感谢评价
+    public static String getEnquirySolveMsg(EnquiryOptionsBean enquiryOptionsBean){
+        if (enquiryOptionsBean == null){
+            return "";
+        }
+        ArrayList<OptionBean> enquiryOptions = enquiryOptionsBean.enquiryOptions;
+        for (OptionBean bean : enquiryOptions){
+            if ("EnquirySolveMsg".equalsIgnoreCase(bean.optionName)){
+                return bean.optionValue;
+            }
+        }
+
+        return "";
+    }
+
+    // 默认是否显示5星好评
+    public static boolean getEnquiryDefaultShow5Score(EnquiryOptionsBean enquiryOptionsBean){
+        if (enquiryOptionsBean == null){
+            return false;
+        }
+        ArrayList<OptionBean> enquiryOptions = enquiryOptionsBean.enquiryOptions;
+        for (OptionBean bean : enquiryOptions){
+            if ("EnquiryDefaultShow5Score".equalsIgnoreCase(bean.optionName)){
+                return "true".equalsIgnoreCase(bean.optionValue);
+            }
+        }
+
+        return false;
+    }
+
+    // 默认是否显示评价备注
+    public static boolean getEnquiryCommentEnable(EnquiryOptionsBean enquiryOptionsBean){
+        if (enquiryOptionsBean == null){
+            return false;
+        }
+        ArrayList<OptionBean> enquiryOptions = enquiryOptionsBean.enquiryOptions;
+        for (OptionBean bean : enquiryOptions){
+            if ("EnquiryCommentEnable".equalsIgnoreCase(bean.optionName)){
+                return "true".equalsIgnoreCase(bean.optionValue);
+            }
+        }
+
+        return false;
+    }
+
+    // 1星，2星，3星 必须填写备注
+    public static boolean getDegreeEnquiryCommentEnable(EnquiryOptionsBean enquiryOptionsBean, int currentRating) {
+        if (enquiryOptionsBean == null){
+            return false;
+        }
+
+        String optionName = "";
+        if (currentRating == 1){
+            optionName = "EnquiryCommentFor1Score";
+        }else if (currentRating == 2){
+            optionName = "EnquiryCommentFor2Score";
+        }else if (currentRating == 3){
+            optionName = "EnquiryCommentFor3Score";
+        }
+
+        ArrayList<OptionBean> enquiryOptions = enquiryOptionsBean.enquiryOptions;
+        for (OptionBean bean : enquiryOptions){
+            if (optionName.equalsIgnoreCase(bean.optionName)){
+                return "true".equalsIgnoreCase(bean.optionValue);
+            }
+        }
+
+        return false;
+    }
+
+    // 1星，2星，3星 必须选择标签
+    public static boolean getDegreeTagsEnable(EnquiryOptionsBean enquiryOptionsBean, int currentRating) {
+        if (enquiryOptionsBean == null){
+            return false;
+        }
+
+        String optionName = "";
+        if (currentRating == 1){
+            optionName = "EnquiryTagsFor1Score";
+        }else if (currentRating == 2){
+            optionName = "EnquiryTagsFor2Score";
+        }else if (currentRating == 3){
+            optionName = "EnquiryTagsFor3Score";
+        }
+
+        ArrayList<OptionBean> enquiryOptions = enquiryOptionsBean.enquiryOptions;
+        for (OptionBean bean : enquiryOptions){
+            if (optionName.equalsIgnoreCase(bean.optionName)){
+                return "true".equalsIgnoreCase(bean.optionValue);
+            }
+        }
+
+        return false;
+    }
+
+    public static String getAction(String msgtype, String type) throws Exception{
+        JSONObject msg = new JSONObject(msgtype);
+        if (msg.has(type)){
+            JSONObject microphone = msg.getJSONObject(type);
+            if (microphone.has("action")){
+                return microphone.getString("action");
+            }
+        }
+        return null;
+    }
+
+    public static boolean isOn(String msgtype, String type)  throws Exception{
+        return "on".equalsIgnoreCase(getAction(msgtype, type));
+    }
+
+    public static String getString(Context context, int stringId) {
+        return context.getApplicationContext().getResources().getString(stringId);
     }
 }

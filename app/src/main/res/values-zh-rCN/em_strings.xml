@@ -42,7 +42,7 @@
     <string name="pop_after_sales">售后客服</string>
     <string name="call_interface">接口调用</string>
     <string name="register_user_fail">注册失败!</string>
-
+    <string name="userName">登录名称</string>
     <string name="leave_title">留言</string>
     <string name="leave_name">名字:</string>
     <string name="leave_phone">电话:</string>

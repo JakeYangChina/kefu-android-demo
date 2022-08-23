@@ -12,10 +12,6 @@ import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.Rect;
 import android.media.AudioManager;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -132,11 +128,11 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
     // 被动呼叫
     public static final int INTENT_CALLING_TAG_PASSIVE_VALUE = 101;
 
-    private final int MAKE_CALL_TIMEOUT = 10 * 60 * 1000;// 未接听，1分钟后超时关闭
+    private final int MAKE_CALL_TIMEOUT = 10 * 60 * 1000;// 未接听，10分钟后超时关闭
 
 
     private AudioManager mAudioManager;
-    private Ringtone mRingtone;
+    // private Ringtone mRingtone;
     private HeadsetReceiver mHeadsetReceiver = new HeadsetReceiver();
     private TextView mTvTitleTips;
     private VideoItemContainerView mMembersContainer;
@@ -167,6 +163,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
     private FrameLayout mShowLocalFlt;
     private PushMessageLink mLink;
+    private View mFocusTv;
 
     private ProgressDialog mProgressDialog;
     // private View mFlatIconView;
@@ -175,10 +172,11 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
     private String mCurrentChatUserName;
     private boolean mIsCreate;
     private boolean mIsRetry;
+    private TextView mCameraTextView;
+    private IconTextView mCameraIcon;
 
     // 默认是被动呼叫
     public static void show(Context context, Intent i){
-        Log.e("yyyyyyyyy","show");
         Intent intent = new Intent(context.getApplicationContext(), CallActivity.class);
         intent.putExtra("type", i.getStringExtra("type"));
         intent.putExtra("appid", i.getStringExtra("appid"));
@@ -188,13 +186,11 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         intent.putExtra("from", i.getStringExtra("from"));
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(INTENT_CALLING_TAG, INTENT_CALLING_TAG_PASSIVE_VALUE);
-        Log.e("yyyyyyyyy","zuoXiSendRequestObj = "+zuoXiSendRequestObj);
         context.startActivity(intent);
     }
 
     // 主动发起呼叫
     public static void show(Context context, String toChatUserName, Intent i){
-        Log.e("yyyyyyyyy","show");
         VecConfig.newVecConfig().setVecVideo(true);
         Intent intent = new Intent(context.getApplicationContext(), CallActivity.class);
         intent.putExtra("type", i.getStringExtra("type"));
@@ -224,7 +220,6 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // TOTO 注意：此代码仅为演示作用，详细逻辑根据实际情况自己实现
-        Log.e("hhhhhhhhh","onCreate");
         if (savedInstanceState != null) {
             finish();
             return;
@@ -233,6 +228,8 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                 | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
                 | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
                 | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+
+        getWindow().setStatusBarColor(Color.BLACK);
 
         Intent intent = getIntent();
 
@@ -283,6 +280,9 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
     private WindowManager mWindowManager;
     private int mHeight;
+    private float mX;
+    private float mY;
+    private boolean mIsFirstAdd;
     private void initVideo() {
         if (mWindowManager == null){
             mWindowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
@@ -290,6 +290,9 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
             // getMetrics()获取到的是去除虚拟按键后的尺寸，而getReaMetrics()获取的则是真正原始的屏幕尺寸，纯天然无公害的屏幕尺寸，二者获的Width相同，Height不同。
             mWindowManager.getDefaultDisplay().getRealMetrics(metrics);
             mHeight = metrics.heightPixels;
+
+            mX = metrics.widthPixels / 2f;
+            mY = mHeight / 2f;
         }
 
 
@@ -325,7 +328,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         view.setVisibility(View.GONE);
 
         mShowLocalFlt = findViewById(R.id.showLocalFlt);
-
+        mFocusTv = findViewById(R.id.focusTv);
         mTopView = findViewById(R.id.top_panel);
         mFixHeightFrameLayout = findViewById(R.id.fixFrameLayout);
         mFixHeightFrameLayout.setCloseFlatCallback(this);
@@ -390,11 +393,6 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         // 开启扬声器
         mAudioManager.setSpeakerphoneOn(true);
 
-        Uri ringUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
-        mRingtone = RingtoneManager.getRingtone(this, ringUri);
-        if (mRingtone != null) {
-            mRingtone.play();
-        }
         mHandler.removeCallbacks(timeoutHangup);
         mHandler.postDelayed(timeoutHangup, MAKE_CALL_TIMEOUT);
         registerReceiver(mHeadsetReceiver, new IntentFilter(Intent.ACTION_HEADSET_PLUG));
@@ -427,6 +425,11 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                                 } else {
                                     addAgoraRadioButton(mZuoXiSendRequestObj.getThreeNiceName(), uid);
                                 }
+
+                                if (!mIsFirstAdd){
+                                    mIsFirstAdd = true;
+                                    iconViewClick(0, null, new Integer(uid));
+                                }
                             }
                         });
                     }
@@ -436,7 +439,6 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Log.e("ooooooooo","onJoinChannelSuccess");
                                 Log.e(TAG, "onJoinChannelSuccess uid = " + uid);
                                 getAsyncVisitorId();
                                 int i = mAgoraRtcEngine.muteLocalAudioStream(!mCurrentLocalVoiceIsOpen);
@@ -452,6 +454,10 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                                     updateCamera(mMyUid, mCurrentLocalCameraIsOpen);
                                 }
 
+                                if (!mCurrentLocalCameraIsOpen){
+                                    mVideoDisables.put(uid, uid);
+                                }
+
                                 mMyUid = uid;
                                 if (mTopView != null && mTopViewHeight != 0) {
                                     mTopViewHeight = mTopView.getHeight();
@@ -464,12 +470,10 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
                     @Override
                     public void onLeaveChannel(RtcStats stats) {
-                        Log.e("sssssssss", "onLeaveChannel");
                     }
 
                     @Override
                     public void onUserOffline(int uid, int reason) {
-                        Log.e("sssssssss", "onUserOffline uid = " + uid);
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -493,6 +497,32 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                             changeRemoteAudioState(uid, true);
                         }
 
+                    }
+
+                    @Override
+                    public void onRemoteVideoStateChanged(int uid, int state, int reason, int elapsed) {
+                        super.onRemoteVideoStateChanged(uid, state, reason, elapsed);
+
+                        if (reason == Constants.REMOTE_VIDEO_STATE_REASON_REMOTE_MUTED) {
+                            // 远端用户停止发送视频流或远端用户禁用视频模块。
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    mVideoDisables.put(uid, uid);
+                                    updateCamera(uid, false);
+                                }
+                            });
+
+                        } else if (reason == Constants.REMOTE_VIDEO_STATE_REASON_REMOTE_UNMUTED) {
+                            // 远端用户恢复发送视频流或远端用户启用视频模块。
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    mVideoDisables.remove(uid);
+                                    updateCamera(uid, true);
+                                }
+                            });
+                        }
                     }
 
                     @Override
@@ -548,7 +578,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
 
     private void removeView(int uid) {
-
+        mVideoDisables.remove(uid);
         // 判断本地视图是否就是退出的用户，如果是，现将自己视图替换回来
         if (mLocalViewItem != null && mLocalViewItem.getRealUid() == uid) {
             // 取出自己视图
@@ -718,6 +748,8 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         }
 
         notifyTitleTips();
+
+        updateCamera();
     }
 
     // 电子白板相关
@@ -735,7 +767,9 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                 startActivityForResult(intent, CloudActivity.UPLOAD_REQUEST);
             }
         });
-        String uid = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+
+        // String uid = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        String uid = String.valueOf(obj.getUid());
         Fastboard fastboard = fastboardView.getFastboard();
         FastRoomOptions roomOptions = new FastRoomOptions(
                 obj.getAppIdentifier(),
@@ -852,6 +886,28 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
             realViewItem.updateCameraView();
         }
 
+    }
+
+    public void updateCamera(){
+
+        if (mLocalViewItem != null) {
+            for (int i : mVideoDisables.keySet()){
+                if (mLocalViewItem.getRealUid() == i){
+                    mLocalViewItem.setOpenCamera(false);
+                    mLocalViewItem.updateCameraView();
+                    break;
+                }
+            }
+        }
+
+        for (AgoraStreamItem item : mStreams.values()){
+            for (int i : mVideoDisables.keySet()){
+                if (item.getRealUid() == i){
+                    item.setOpenCamera(false);
+                    item.updateCameraView();
+                }
+            }
+        }
     }
 
     private AgoraStreamItem getExcludeLocalRealViewItem(int uid) {
@@ -1092,6 +1148,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
 
     private Map<Integer, Integer> mUids = new HashMap<>();
+    private Map<Integer, Integer> mVideoDisables = new HashMap<>();
 
     private AgoraStreamItem getAgoraStreamItem(Integer uid) {
         return mStreams.get(uid);
@@ -1140,8 +1197,6 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         mAgoraRtcEngine.setupLocalVideo(surfaceView, AgoraRtcEngine.RENDER_MODE_HIDDEN, obj.getUid());
         mAgoraRtcEngine.joinChannel(obj.getToken(), obj.getChannel(), obj.getUid());
 
-        Log.e("CallActivity", "uid = "+obj.getUid());
-        Log.e("CallActivity", "channel = "+obj.getChannel());
 
     }
 
@@ -1357,7 +1412,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         fl_local.addView(surfaceView);
         // 更新名称
         mLocalViewItem.updateName();
-        mStreams.get(sFlatUuid);
+        // mStreams.get(sFlatUuid);
     }
 
     private void switchViewAtTopPosition(int localUid, int uid) {
@@ -1455,7 +1510,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
     private void notifyTitleTips() {
         // mTvTitleTips.setText(String.format(getString(R.string.tip_video_calling), mStreams.size() + 1));
-        mTvTitleTips.setText(getString(R.string.tip_video_calling));
+        mTvTitleTips.setText(getString(R.string.vec_video_calling));
     }
 
     private final Map<Integer, AgoraStreamItem> mStreams = new ConcurrentHashMap<>();
@@ -1521,9 +1576,9 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            if (mRingtone != null) {
+                            /*if (mRingtone != null) {
                                 mRingtone.stop();
-                            }
+                            }*/
                             openSpeakerOn();
                             mNoAcceptView.setVisibility(View.GONE);
                             mNoAcceptView.stop();
@@ -1548,9 +1603,9 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                         @Override
                         public void run() {
                             closeDialog();
-                            if (mRingtone != null) {
+                            /*if (mRingtone != null) {
                                 mRingtone.stop();
-                            }
+                            }*/
 
                             /*if (mSSClient != null) {
                                 // mSSClient.stop(getApplication());
@@ -1577,7 +1632,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                                         @Override
                                         public void onSuccess(String value) {
                                             if (mIsRetry){
-                                                CallVideoActivity.startDialogTypeRetry(getApplicationContext(), mPreActiveChatUserName);
+                                                CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
                                             }
                                             mHandler.sendEmptyMessage(MSG_CLEAR);
                                         }
@@ -1585,7 +1640,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                                         @Override
                                         public void onError(int error, String errorMsg) {
                                             if (mIsRetry){
-                                                CallVideoActivity.startDialogTypeRetry(getApplicationContext(), mPreActiveChatUserName);
+                                                CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
                                             }
                                             mHandler.sendEmptyMessage(MSG_CLEAR);
                                         }
@@ -1593,7 +1648,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                                 }else {
                                     ChatClient.getInstance().callManager().endVecCall(mZuoXiSendRequestObj.getCallId(), isOnLine);
                                     if (mIsRetry){
-                                        CallVideoActivity.startDialogTypeRetry(getApplicationContext(), mPreActiveChatUserName);
+                                        CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
                                     }
                                     mHandler.sendEmptyMessage(MSG_CLEAR);
                                 }
@@ -1627,6 +1682,10 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
+                            // 获取时间
+                            if (mChronometer != null){
+                                VecConfig.newVecConfig().setVideoCallTimer(mChronometer.getText().toString());
+                            }
                             clear();
                         }
                     });
@@ -1638,7 +1697,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                         public void run() {
                             closeDialog();
                             // 10M
-                            showToast("上传文件失败，请查看网络！");
+                            showToast(Utils.getString(getApplicationContext(), R.string.vec_upload_file_fail));
                         }
                     });
                     break;
@@ -1661,7 +1720,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                             closeDialog();
                             mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_FLAT), true);
                             mFixHeightFrameLayout.showFullHeight();
-                            showToast("创建白板房间失败！请重试。");
+                            showToast(Utils.getString(getApplicationContext(), R.string.vec_create_whiteboard_fail));
                         }
                     });
                     break;
@@ -1672,21 +1731,9 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                     AgoraMessage.asyncFileConverted(mUrl, AgoraMessage.getToken(), mZuoXiSendRequestObj.getCallId(), ChatClient.getInstance().tenantId(), type, new ValueCallBack<String>() {
                         @Override
                         public void onSuccess(String value) {
-                            Log.e("ttttttttt", "asyncFileConverted = " + value);
                             if (!isOnLine) {
                                 return;
                             }
-
-                            /*{
-                                "status": "OK",
-                                    "entity": {
-                                "uuid": "9ed47370c13a11ec94c0312d35e72631",
-                                        "token": "NETLESSTASK_YWs9ZUktd2RsQmk3eENrU3M3VCZleHBpcmVBdD0xNjUwNTI1NDA2MDQ0Jm5vbmNlPTEzY2Y5M2JlLTRlMTctNGFmMy1iYjU2LWRkYTY3YzhmZmRiMCZyb2xlPTImc2lnPTA4OTI4MThlYTI1N2NkZjRlZDM1ZWVkMmNiZjI4OWNkY2RiZmQ2MDFkY2FlMzBjNDdjNTNlYTA2ZWU0YmVjMzUmdXVpZD05ZWQ0NzM3MGMxM2ExMWVjOTRjMDMxMmQzNWU3MjYzMQ",
-                                        "type": "static",
-                                        "status": "Waiting"
-                            }
-                            }*/
-
                             // 设置url
                             try {
                                 JSONObject object = new JSONObject(value);
@@ -1710,12 +1757,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                                     if (!entity.isNull("type")) {
                                         mCloudFile.typeString = entity.getString("type");
                                     }
-
-                                    /*if (!entity.isNull("status")){
-                                        String status = entity.getString("status");
-                                    }*/
                                 }
-                                //test(mCloudFile.url);
                                 Message obtain = Message.obtain();
                                 obtain.what = MSG_UPLOAD_FLAT_FILE_SUCCESS;
                                 mHandler.sendMessage(obtain);
@@ -1728,8 +1770,6 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
                         @Override
                         public void onError(int error, String errorMsg) {
-                            Log.e("ttttttttt", "asyncFileConverted error = " + error);
-                            Log.e("ttttttttt", "asyncFileConverted errorMsg = " + errorMsg);
                             mHandler.sendEmptyMessage(MSG_UPLOAD_FLAT_FILE_FAIL);
                         }
                     });
@@ -1772,7 +1812,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         if (!isOnLine) {
             super.onBackPressed();
         } else {
-            Toast.makeText(this, "正在通话中...", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, Utils.getString(getApplicationContext(), R.string.vec_video_calling), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -1809,7 +1849,6 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         if (mUids.size() >= 1) {
             return;
         }
-        Log.e("rrrrrrrr", "zuoXiToBreakOff");
         mHandler.sendEmptyMessage(MSG_CALL_END);
     }
 
@@ -1871,11 +1910,10 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
     }
 
     private void clear() {
-        // 释放屏幕分享
-        /*if (mSSClient != null) {
-            // mSSClient.stop(getApplication());
-            mSSClient.stop();
-        }*/
+        mIsFirstAdd = false;
+        if (mVideoDisables != null){
+            mVideoDisables.clear();
+        }
 
         // 释放屏幕分享
         if (mAgoraRtcEngine != null && isSharing) {
@@ -1896,9 +1934,9 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         AgoraMessage.newAgoraMessage().unRegisterAgoraMessageNotify(getClass().getSimpleName());
         mIsClick = false;
         sendIsOnLineState(false);
-        if (mRingtone != null && mRingtone.isPlaying()) {
+        /*if (mRingtone != null && mRingtone.isPlaying()) {
             mRingtone.stop();
-        }
+        }*/
         if (mHandler != null) {
             mHandler.removeCallbacks(timeoutDialog);
             mHandler.removeCallbacks(timeoutHangup);
@@ -2100,14 +2138,14 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                         View popupItem = View.inflate(getApplication(), R.layout.popup_vec_item, null);
                         popupItem.measure(0, 0);
                         // TODO 动态修改状态
-                        TextView cameraTextView = popupItem.findViewById(R.id.cameraTextView);
-                        IconTextView cameraIcon = popupItem.findViewById(R.id.cameraIcon);
+                        mCameraTextView = popupItem.findViewById(R.id.cameraTextView);
+                        mCameraIcon = popupItem.findViewById(R.id.cameraIcon);
 
-                        cameraTextView.setText(mCurrentLocalCameraIsOpen ? "关闭摄像头" : "开启摄像头");
+                        mCameraTextView.setText(mCurrentLocalCameraIsOpen ? Utils.getString(getApplicationContext(), R.string.vec_close_camera) : Utils.getString(getApplicationContext(), R.string.vec_open_camera));
                         // 默认状态相反
                         BottomContainerView.ViewIconData data = mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME));
-                        cameraIcon.setText(mCurrentLocalCameraIsOpen ? data.getPressIcon() : data.getDefaultIcon());
-                        cameraIcon.setTextColor(mCurrentLocalCameraIsOpen ? Color.parseColor(data.getPressIconColor()) : Color.parseColor(data.getDefaultIconColor()));
+                        mCameraIcon.setText(mCurrentLocalCameraIsOpen ? data.getPressIcon() : data.getDefaultIcon());
+                        mCameraIcon.setTextColor(mCurrentLocalCameraIsOpen ? Color.parseColor(data.getPressIconColor()) : Color.parseColor(data.getDefaultIconColor()));
 
 
                         popupItem.findViewById(R.id.oneFlt).setOnClickListener(new View.OnClickListener() {
@@ -2115,38 +2153,41 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                             public void onClick(View v) {
                                 closePopupWindow();
                                 // 开关摄像头
-                                String text = cameraTextView.getText().toString();
-                                if ("关闭摄像头".equals(text)) {
+                                String text = mCameraTextView.getText().toString();
+                                if (Utils.getString(getApplicationContext(), R.string.vec_close_camera).equals(text)) {
                                     int i = mAgoraRtcEngine.muteLocalVideoStream(true);
                                     if (i == 0) {
+                                        closeFlashLightAndTorch();
                                         mCurrentLocalCameraIsOpen = false;
+                                        mVideoDisables.put(mMyUid, mMyUid);
                                         // 找到本地视图
                                         updateCamera(mMyUid, mCurrentLocalCameraIsOpen);
-                                        cameraTextView.setText("开启摄像头");
-                                        cameraIcon.setText(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getDefaultIcon());
-                                        cameraIcon.setTextColor(Color.parseColor(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getDefaultIconColor()));
+                                        mCameraTextView.setText(Utils.getString(getApplicationContext(), R.string.vec_open_camera));
+                                        mCameraIcon.setText(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getDefaultIcon());
+                                        mCameraIcon.setTextColor(Color.parseColor(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getDefaultIconColor()));
 
 
                                         mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME), mCurrentLocalCameraIsOpen);
-                                        Toast.makeText(getApplicationContext(), "关闭摄像头成功！", Toast.LENGTH_LONG).show();
+                                        Toast.makeText(getApplicationContext(), Utils.getString(getApplicationContext(), R.string.vec_close_camera_success), Toast.LENGTH_LONG).show();
                                     } else {
                                         mCurrentLocalCameraIsOpen = true;
-                                        Toast.makeText(getApplicationContext(), "关闭摄像头失败，请检查网络！", Toast.LENGTH_LONG).show();
+                                        Toast.makeText(getApplicationContext(), Utils.getString(getApplicationContext(), R.string.vec_close_camera_fail), Toast.LENGTH_LONG).show();
                                     }
                                 } else {
                                     int i = mAgoraRtcEngine.muteLocalVideoStream(false);
                                     if (i == 0) {
                                         mCurrentLocalCameraIsOpen = true;
+                                        mVideoDisables.remove(mMyUid);
                                         // 找到本地视图
                                         updateCamera(mMyUid, mCurrentLocalCameraIsOpen);
-                                        cameraTextView.setText("关闭摄像头");
-                                        cameraIcon.setText(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getPressIcon());
-                                        cameraIcon.setTextColor(Color.parseColor(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getPressIconColor()));
+                                        mCameraTextView.setText(Utils.getString(getApplicationContext(), R.string.vec_close_camera));
+                                        mCameraIcon.setText(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getPressIcon());
+                                        mCameraIcon.setTextColor(Color.parseColor(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getPressIconColor()));
                                         mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME), mCurrentLocalCameraIsOpen);
-                                        Toast.makeText(getApplicationContext(), "开启摄像头成功！", Toast.LENGTH_LONG).show();
+                                        Toast.makeText(getApplicationContext(), Utils.getString(getApplicationContext(), R.string.vec_open_camera_success), Toast.LENGTH_LONG).show();
                                     } else {
                                         mCurrentLocalCameraIsOpen = false;
-                                        Toast.makeText(getApplicationContext(), "开启摄像头失败，请检查网络！", Toast.LENGTH_LONG).show();
+                                        Toast.makeText(getApplicationContext(), Utils.getString(getApplicationContext(), R.string.vec_open_camera_fail), Toast.LENGTH_LONG).show();
                                     }
                                 }
                             }
@@ -2158,8 +2199,10 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                                 // 切换摄像头
                                 int i = mAgoraRtcEngine.switchCamera();
                                 if (i == 0){
-                                    mIsBackCamera = !mIsBackCamera;
-                                    mCurrentCameraIsBack = mIsBackCamera;
+                                    if (!mIsClickFace){
+                                        mIsBackCamera = !mIsBackCamera;
+                                    }
+                                    mCurrentCameraIsBack = !mCurrentCameraIsBack;
                                 }
                             }
                         });
@@ -2168,9 +2211,9 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                         mPopupWindow.setOutsideTouchable(true);
                     }
                     if (mIconDatas.size() == 3) {
-                        mPopupWindow.showAtLocation(findViewById(android.R.id.content), Gravity.BOTTOM | Gravity.RIGHT, dp2px(6), getResources().getDimensionPixelSize(R.dimen.dp_62) + dp2px(13));
+                        mPopupWindow.showAtLocation(findViewById(android.R.id.content), Gravity.BOTTOM | Gravity.RIGHT, dp2px(6), getResources().getDimensionPixelSize(R.dimen.bottom_nav_height) + dp2px(13));
                     } else {
-                        mPopupWindow.showAtLocation(findViewById(android.R.id.content), Gravity.BOTTOM | Gravity.LEFT, dp2px(42), getResources().getDimensionPixelSize(R.dimen.dp_62) + dp2px(13));
+                        mPopupWindow.showAtLocation(findViewById(android.R.id.content), Gravity.BOTTOM | Gravity.LEFT, dp2px(42), getResources().getDimensionPixelSize(R.dimen.bottom_nav_height) + dp2px(13));
                     }
 
                 } else if (BottomContainerView.ViewIconData.TYPE_ITEM_PHONE.equalsIgnoreCase(mIconDatas.get(index).getName())) {
@@ -2180,14 +2223,14 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                 } else if (BottomContainerView.ViewIconData.TYPE_ITEM_SHARE.equalsIgnoreCase(mIconDatas.get(index).getName())) {
                     // 桌面分享
                     if (mIsStartBoard) {
-                        showToast("请先关闭白板！");
+                        showToast(Utils.getString(getApplicationContext(), R.string.vec_close_whiteboard));
                     } else {
                         shareWindow();
                     }
 
                 } else if (BottomContainerView.ViewIconData.TYPE_ITEM_FLAT.equalsIgnoreCase(mIconDatas.get(index).getName())) {
                     if (isSharing) {
-                        showToast("请先关闭桌面分享！");
+                        showToast(Utils.getString(getApplicationContext(), R.string.vec_close_window_share));
                         return true;
                     }
 
@@ -2198,7 +2241,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                             mFixHeightFrameLayout.showHalfHeight();
                         }
                         // 显示加载对话框
-                        showDialog("正在加载…");
+                        showDialog(Utils.getString(getApplicationContext(), R.string.vec_loading));
                         mHandler.removeCallbacks(timeoutDialog);
                         mHandler.postDelayed(timeoutDialog, DELAYED_CLOSE_DIALOG);
                         initFlatIconView();
@@ -2208,7 +2251,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                         // 发送请求到服务器，创建电子白板roomId，结果会回调createFlatRoom方法
                         ChatClient.getInstance().callManager().createFlatRoom(mZuoXiSendRequestObj.getCallId());
                     } else {
-                        showToast("不能重复开启电子白板！");
+                        showToast(Utils.getString(getApplicationContext(), R.string.vec_not_repeat_open_whiteboard));
                     }
                 }
                 return true;
@@ -2261,7 +2304,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
             mFixHeightFrameLayout.showHalfHeight();
         }
         // 显示加载对话框
-        showDialog("正在加载…");
+        showDialog(Utils.getString(getApplicationContext(), R.string.vec_loading));
         initFlatIconView();
         mFlatRoomItem.findViewById(R.id.full).setTag("0");
         mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_FLAT), false);
@@ -2342,8 +2385,8 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         fastRoom.insertVideo(cloudFile.url, cloudFile.name);
     }
 
-    // 插入文件
-    /*private void insertDocs(CloudFile file) {
+
+    /*private void insertDocss(CloudFile file) {
         FastInsertDocParams params = new FastInsertDocParams(file.taskUUID, file.taskToken, file.type, file.name);
 
         fastRoom.insertDocs(params, new FastResult<String>() {
@@ -2359,25 +2402,9 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         });
     }*/
 
-    private void insertDocss(CloudFile file) {
-        FastInsertDocParams params = new FastInsertDocParams(file.taskUUID, file.taskToken, file.type, file.name);
-
-        fastRoom.insertDocs(params, new FastResult<String>() {
-            @Override
-            public void onSuccess(String value) {
-                Log.e("CloudFilesController", "insert Docs success");
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                showToast("插入文档失败，请查看网络！");
-            }
-        });
-    }
-
-    private boolean isDynamicDoc(String fileType) {
+    /*private boolean isDynamicDoc(String fileType) {
         return "pptx".equals(fileType);
-    }
+    }*/
 
     // 插入文件
     private void insertDocs(CloudFile obj, FastResult<String> result) {
@@ -2409,7 +2436,6 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                         WindowAppParam param = WindowAppParam.createSlideApp(generateUniqueDir(converted.getTaskId()), s, obj.name);
                         fastRoom.getRoom().addApp(param, new PromiseResultAdapter<>(result));
                         closeDialog();
-                        com.hyphenate.helpdesk.util.Log.e("tttttttttttt","成功");
                     }
 
                     private String generateUniqueDir(String taskUUID) {
@@ -2442,7 +2468,6 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                 new ValueCallBack<String>() {
                     @Override
                     public void onSuccess(String value) {
-                        Log.e("tttttttttt", "onSuccess = " + value);
                         if (!isOnLine) {
                             return;
                         }
@@ -2471,14 +2496,12 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                             insertFlatFile(mCloudFile);
                         } catch (JSONException e) {
                             e.printStackTrace();
-                            Log.e("tttttttttt", "JSONException = " + e.toString());
                             mHandler.sendEmptyMessage(MSG_UPLOAD_FLAT_FILE_FAIL);
                         }
                     }
 
                     @Override
                     public void onError(int error, String errorMsg) {
-                        Log.e("tttttttttt", "onError = " + errorMsg);
                         mHandler.sendEmptyMessage(MSG_UPLOAD_FLAT_FILE_FAIL);
                     }
                 });
@@ -2525,14 +2548,14 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         super.onActivityResult(requestCode, resultCode, data);
         if (CloudActivity.UPLOAD_REQUEST == requestCode) {
             if (data == null) {
-                showToast("上传失败，文件路径为空！");
+                showToast(Utils.getString(getApplicationContext(), R.string.vec_upload_file_fail_no_path));
                 return;
             }
             // 图片
             //Uri selectedImage = data.getData();
             String path = data.getStringExtra("path");
             if (TextUtils.isEmpty(path)) {
-                showToast("上传失败，选择文件路径为空！");
+                showToast(Utils.getString(getApplicationContext(), R.string.vec_upload_file_fail_no_path));
                 return;
             }
             if (resultCode == CloudActivity.REQUEST_FILE) {
@@ -2549,9 +2572,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                 mClickType = CloudActivity.REQUEST_VOICE;
             }
 
-            showDialog("文件上传中…");
-            /*String path = UriUtils.getFilePath(this, selectedImage);*/
-            Log.e("ttttttttt", "path = " + path);
+            showDialog(Utils.getString(getApplicationContext(), R.string.vec_file_uploading));
             CloudFile cloudFile = new CloudFile();
             cloudFile.url = path;
             cloudFile.width = getWidth();
@@ -2570,96 +2591,328 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
     }
 
 
-
+    // 手电筒
+    private boolean mIsOnFlashLight;
+    // 闪光灯
+    private boolean mIsOnTorch;
     @Override
     public void pushMessage(String msgtype, String type) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Log.e("rrrrrrrrr","msgtype = "+msgtype);
-                    if (AgoraMessage.TYPE_LINK_MESSAGE_PUSH.equalsIgnoreCase(type)){
-                        if (mLink != null){
+                    if (AgoraMessage.TYPE_LINK_MESSAGE_PUSH.equalsIgnoreCase(type)) {
+                        if (mLink != null) {
                             mLink.clear();
                             mLink = null;
                         }
                         mLink = new PushMessageLink();
                         mLink.init(msgtype, mPushView, null, getApplication(), mHeight);
-                    }else if (AgoraMessage.TYPE_CARD_OCR.equalsIgnoreCase(type)){
+                    } else if (AgoraMessage.TYPE_CARD_OCR.equalsIgnoreCase(type)) {
                         // 卡证识别
                         JSONObject msg = new JSONObject(msgtype);
-                        if (!msg.isNull("cardocr")){
+                        if (!msg.isNull("cardocr")) {
                             JSONObject infopush = msg.getJSONObject("cardocr");
-                            // 开始操作  cardocr_face_start 识别身份证人像面，cardocr_back_start 识别身份证国徽面，cardocr_bank_start 识别银行卡
                             String action = infopush.getString("action");
-                            // {"cardocr":{"action":"cardocr_back_start","flowId":"689"}}
-                            if ("cardocr_face_start".equalsIgnoreCase(action)){
+                            if ("cardocr_face_start".equalsIgnoreCase(action)) {
                                 // 识别身份证人像面
                                 sdcardStart();
-                            }else if ("cardocr_face_end".equalsIgnoreCase(action)){
+                            } else if ("cardocr_face_end".equalsIgnoreCase(action)) {
                                 // 识别身份证人像面 结束
                                 sdcardEnd();
-                            }else if ("cardocr_back_start".equalsIgnoreCase(action)){
+                            } else if ("cardocr_back_start".equalsIgnoreCase(action)) {
                                 // 识别身份证国徽面
                                 sdcardStart();
-                            }else if ("cardocr_back_end".equalsIgnoreCase(action)){
+                            } else if ("cardocr_back_end".equalsIgnoreCase(action)) {
                                 // 识别身份证国徽面 结束
                                 sdcardEnd();
-                            }else if ("cardocr_bank_start".equalsIgnoreCase(action)){
+                            } else if ("cardocr_bank_start".equalsIgnoreCase(action)) {
                                 // 识别银行卡
                                 sdcardStart();
-                            }else if ("cardocr_bank_end".equalsIgnoreCase(action)){
+                            } else if ("cardocr_bank_end".equalsIgnoreCase(action)) {
                                 // 识别银行卡 结束
                                 sdcardEnd();
                             }
                         }
 
-                    }else if (AgoraMessage.TYPE_ELECSIGN.equalsIgnoreCase(type)){
+                    } else if (AgoraMessage.TYPE_ELECSIGN.equalsIgnoreCase(type)) {
                         // 电子签名
                         JSONObject msg = new JSONObject(msgtype);
-                        if (!msg.isNull("elecsign")){
+                        if (!msg.isNull("elecsign")) {
                             JSONObject elecsign = msg.getJSONObject("elecsign");
                             String action = elecsign.getString("action");
                             String flowId = elecsign.getString("flowId");
-                            if ("elecsign_start".equalsIgnoreCase(action)){
+                            if ("elecsign_start".equalsIgnoreCase(action)) {
                                 // 开始
                                 signature(flowId);
-                            }else if ("elecsign_end".equalsIgnoreCase(action)){
+                            } else if ("elecsign_end".equalsIgnoreCase(action)) {
                                 signatureEnd();
                             }
                         }
-                    }else if (AgoraMessage.TYPE_IDENTITYAUTH.equalsIgnoreCase(type)){
+                    } else if (AgoraMessage.TYPE_IDENTITYAUTH.equalsIgnoreCase(type)) {
                         // 身份认证，人脸
                         JSONObject msg = new JSONObject(msgtype);
-                        if (!msg.isNull("identityauth")){
+                        if (!msg.isNull("identityauth")) {
                             JSONObject elecsign = msg.getJSONObject("identityauth");
                             // "action":"identityauth_start"
                             String action = elecsign.getString("action");
-                            if ("identityauth_start".equalsIgnoreCase(action)){
+                            if ("identityauth_start".equalsIgnoreCase(action)) {
                                 face();
-                            }else if ("identityauth_end".equalsIgnoreCase(action)){
+                            } else if ("identityauth_end".equalsIgnoreCase(action)) {
                                 faceEnd();
                             }
                         }
+                    } else if (AgoraMessage.TYPE_MICROPHONE.equalsIgnoreCase(type)) {
+                        // 开关麦克风
+                        boolean on = Utils.isOn(msgtype, type);
+                        int i = mAgoraRtcEngine.muteLocalAudioStream(!on);
+                        if (i == 0) {
+                            sendMicrophone("");
+                            mCurrentLocalVoiceIsOpen = Utils.isOn(msgtype, type);
+                            mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_VOICE), mCurrentLocalVoiceIsOpen);
+                            mLocalViewItem.updateName();
+                            updateVoiceIcon(mMyUid, mCurrentLocalVoiceIsOpen);
+                        } else {
+                            sendMicrophone("操作失败！");
+                        }
+
+                    } else if (AgoraMessage.TYPE_CAMERA.equalsIgnoreCase(type)) {
+                        // 开关摄像头
+                        boolean on = Utils.isOn(msgtype, type);
+                        int i1 = mAgoraRtcEngine.muteLocalVideoStream(!on);
+                        if (i1 == 0) {
+                            sendCamera("");
+                            closeFlashLightAndTorch();
+                            mCurrentLocalCameraIsOpen = on;
+                            mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME), mCurrentLocalCameraIsOpen);
+                            mLocalViewItem.updateCameraView();
+                            updateCamera(mMyUid, mCurrentLocalCameraIsOpen);
+
+                            if (on) {
+                                mCameraTextView.setText(Utils.getString(getApplicationContext(), R.string.vec_close_camera));
+                                mCameraIcon.setText(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getPressIcon());
+                                mCameraIcon.setTextColor(Color.parseColor(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getPressIconColor()));
+                            } else {
+                                mCameraTextView.setText(Utils.getString(getApplicationContext(), R.string.vec_open_camera));
+                                mCameraIcon.setText(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getDefaultIcon());
+                                mCameraIcon.setTextColor(Color.parseColor(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getDefaultIconColor()));
+                            }
+                        } else {
+                            String msg = Utils.getString(getApplicationContext(), R.string.vec_operation_fail);
+                            sendCamera(msg);
+                        }
+
+                    } else if (AgoraMessage.TYPE_FOCUS_CAMERA.equalsIgnoreCase(type)) {
+                        Log.e("ooooooooooo", "开关聚焦");
+                        // 聚焦
+                        if (mAgoraRtcEngine.isCameraFocusSupported()) {
+                            if (!mCurrentCameraIsBack) {
+                                String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
+                                showToast(msg);
+                                sendCameraFocus(msg);
+                                return;
+                            }
+
+                            if (mCurrentLocalCameraIsOpen){
+                                showAndHidden(mFocusTv, true);
+                                new Handler().postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        showAndHidden(mFocusTv, false);
+                                    }
+                                }, 2000);
+                                sendCameraFocus("");
+                                mAgoraRtcEngine.setCameraFocusPositionInPreview(mX, mY);
+                            }else {
+                                String msg = Utils.getString(getApplicationContext(), R.string.current_came_disable);
+                                sendCameraFocus(msg);
+                                showToast(msg);
+                            }
+
+                        } else {
+                            String msg = Utils.getString(getApplicationContext(), R.string.vec_no_support_feature);
+                            sendCameraFocus(msg);
+                            showToast(msg);
+                        }
+
+                    } else if (AgoraMessage.TYPE_CAMERA_TORCH_ON.equalsIgnoreCase(type)) {
+                        Log.e("ooooooooooo", "开关闪光灯");
+                        // 开关闪光灯
+                        if (!mCurrentCameraIsBack) {
+                            String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
+                            showToast(msg);
+                            sendCameraTorch(false, msg);
+                            return;
+                        }
+
+                        boolean on = Utils.isOn(msgtype, type);
+                        if (on) {
+                            if (mCurrentCameraIsBack) {
+                                if (mAgoraRtcEngine.isCameraTorchSupported()) {
+                                    mAgoraRtcEngine.setCameraTorchOn(on);
+                                    mIsOnTorch = true;
+                                    sendCameraTorch(true, "");
+                                } else {
+                                    String msg = Utils.getString(getApplicationContext(), R.string.vec_no_support_feature);
+                                    mIsOnTorch = false;
+                                    sendCameraTorch(false, msg);
+                                }
+
+                            } else {
+                                String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
+                                sendCameraTorch(false, msg);
+                                showToast(msg);
+                            }
+                        } else {
+                            if (mCurrentCameraIsBack) {
+                                if (mAgoraRtcEngine.isCameraTorchSupported()) {
+                                    mAgoraRtcEngine.setCameraTorchOn(on);
+                                    mIsOnTorch = false;
+                                    sendCameraTorch(false, "");
+                                } else {
+                                    String msg = Utils.getString(getApplicationContext(), R.string.vec_no_support_feature);
+                                    mIsOnTorch = false;
+                                    sendCameraTorch(false, msg);
+                                }
+                            } else {
+                                String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
+                                sendCameraTorch(false, msg);
+                            }
+                        }
+                    } else if (AgoraMessage.TYPE_FLASH_LIGHT.equalsIgnoreCase(type)) {
+                        // 开关手电筒
+                        Log.e("ooooooooooo", "开关手电筒");
+                        // 判断是否为前置
+                        if (!mCurrentCameraIsBack) {
+                            String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
+                            showToast(msg);
+                            sendFlashLight(false, msg);
+                            return;
+                        }
+
+                        boolean on = Utils.isOn(msgtype, type);
+                        Log.e("yyyyyyyyyyy","msgtype = "+msgtype);
+                        Log.e("yyyyyyyyyyy","on = "+on);
+
+                        if (on) {
+                            if (mCurrentCameraIsBack) {
+                                if (mAgoraRtcEngine.isCameraTorchSupported()) {
+                                    mAgoraRtcEngine.setCameraTorchOn(on);
+                                    mIsOnFlashLight = true;
+                                    sendFlashLight(true, "");
+                                } else {
+                                    mIsOnFlashLight = false;
+                                    String msg = Utils.getString(getApplicationContext(), R.string.vec_no_support_feature);
+                                    sendFlashLight(false, msg);
+                                }
+
+                            } else {
+                                String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
+                                sendFlashLight(false, msg);
+                                showToast(msg);
+                            }
+                        } else {
+                            if (mCurrentCameraIsBack) {
+                                if (mAgoraRtcEngine.isCameraTorchSupported()) {
+                                    mAgoraRtcEngine.setCameraTorchOn(on);
+                                    mIsOnFlashLight = false;
+                                    sendFlashLight(false, "");
+                                } else {
+                                    String msg = Utils.getString(getApplicationContext(), R.string.vec_no_support_feature);
+                                    mIsOnFlashLight = false;
+                                    sendFlashLight(false, msg);
+                                }
+                            } else {
+                                String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
+                                sendFlashLight(false, msg);
+                            }
+                        }
+                    } else if (AgoraMessage.TYPE_CAMERA_CHANGE_ON.equalsIgnoreCase(type)) {
+                        // 切换摄像头
+                        int i = mAgoraRtcEngine.switchCamera();
+                        if (i == 0) {
+                            sendChangeCamera("");
+                            if (!mIsClickFace){
+                                mIsBackCamera = !mIsBackCamera;
+                            }
+                            mCurrentCameraIsBack = !mCurrentCameraIsBack;
+                        } else {
+                            String msg = Utils.getString(getApplicationContext(), R.string.vec_operation_fail);
+                            sendChangeCamera(msg);
+                        }
+
                     }
 
-
-                }catch (Exception e){
+                } catch (Exception e) {
                     e.printStackTrace();
-                    Log.e("rrrrrrrrr","error = "+e.toString());
                 }
 
             }
         });
     }
 
-    private void face(){
+    // 关闭闪光灯和手电筒
+    private void closeFlashLightAndTorch(){
+        if (mIsOnFlashLight){
+            // 关闭
+            mAgoraRtcEngine.setCameraTorchOn(false);
+            mIsOnFlashLight = false;
+            sendFlashLight(false, "");
+        }
+
+        if (mIsOnTorch){
+            // 关闭
+            mAgoraRtcEngine.setCameraTorchOn(false);
+            mIsOnTorch = false;
+            sendCameraTorch(false, "");
+        }
+    }
+
+    // 手电筒
+    private void sendFlashLight(boolean isOk, String msg) {
+        Log.e("uuuuuuuuuuuuuu","sendFlashLight 不发送");
+        VECKitCalling.sendNotify("flashlightcallback", "flashlightcallback", isOk ? "on" : "off", msg);
+    }
+
+    // 闪光灯
+    private void sendCameraTorch(boolean isOk, String msg) {
+        VECKitCalling.sendNotify("cameraTorchOncallback", "cameraTorchOncallback", isOk ? "on" : "off", msg);
+    }
+
+    // 聚焦
+    private void sendCameraFocus(String msg) {
+        VECKitCalling.sendNotify("focusCameracallback", "focusCameracallback", "", msg);
+    }
+
+    // 麦克风
+    private void sendMicrophone(String msg) {
+        VECKitCalling.sendNotify("microphonecallback", "microphonecallback", "", msg);
+    }
+
+    // 相机
+    private void sendCamera(String msg) {
+        VECKitCalling.sendNotify("cameracallback", "cameracallback", "", msg);
+    }
+
+    // 切换相机
+    private void sendChangeCamera(String msg) {
+        VECKitCalling.sendNotify("cameraChangecallback", "cameraChangecallback", "", msg);
+    }
+
+    private boolean mIsClickFace;
+    private void face() {
+        mIsClickFace = true;
         // 身份证认证开始
         // 当前相机方向，切换摄像头，
-        if (mIsBackCamera){
-            if (mAgoraRtcEngine != null){
+        if (mIsBackCamera) {
+            if (mAgoraRtcEngine != null) {
                 int i = mAgoraRtcEngine.switchCamera();
-                Log.e("yyyyyyyyy","切换相机状态 = "+(i == 0));
+                if (i == 0){
+                    mCurrentCameraIsBack = false;
+                }else {
+                    mCurrentCameraIsBack = true;
+                }
+
             }
         }
 
@@ -2674,13 +2927,16 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
     }
 
-    private void faceEnd(){
+    private void faceEnd() {
+        mIsClickFace = false;
         // 身份证认证结束
         // 恢复显示
-        if (mIsBackCamera){
-            if (mAgoraRtcEngine != null){
+        if (mCurrentCameraIsBack != mIsBackCamera) {
+            if (mAgoraRtcEngine != null) {
                 int i = mAgoraRtcEngine.switchCamera();
-                Log.e("yyyyyyyyy","切换相机状态 = "+(i == 0));
+                if (i == 0){
+                    mCurrentCameraIsBack = !mCurrentCameraIsBack;
+                }
             }
         }
 
@@ -2691,15 +2947,15 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
     }
 
 
-    private void showFlt(){
+    private void showFlt() {
         showAndHidden(mShowLocalFlt, true);
 
-        if (mLocalViewItem.getRealUid() == mMyUid){
+        if (mLocalViewItem.getRealUid() == mMyUid) {
             fl_local.removeAllViews();
             TextureView surfaceView = mLocalViewItem.getSurfaceView();
             removeViewFromParent(surfaceView);
             mShowLocalFlt.addView(surfaceView);
-        }else {
+        } else {
             AgoraStreamItem realViewItem = getExcludeLocalRealViewItem(mMyUid);
             FrameLayout remoteView = realViewItem.getRemoteView();
             TextureView surfaceView = realViewItem.getSurfaceView();
@@ -2710,17 +2966,17 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
     }
 
-    private void hiddenFlt(){
+    private void hiddenFlt() {
         showAndHidden(mShowLocalFlt, false);
         mShowLocalFlt.removeAllViews();
 
-        if (mLocalViewItem.getRealUid() == mMyUid){
+        if (mLocalViewItem.getRealUid() == mMyUid) {
             fl_local.removeAllViews();
             mShowLocalFlt.removeAllViews();
             TextureView surfaceView = mLocalViewItem.getSurfaceView();
             removeViewFromParent(surfaceView);
             fl_local.addView(surfaceView);
-        }else {
+        } else {
             AgoraStreamItem realViewItem = getExcludeLocalRealViewItem(mMyUid);
             FrameLayout remoteView = realViewItem.getRemoteView();
             TextureView surfaceView = realViewItem.getSurfaceView();
@@ -2734,8 +2990,8 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
     private boolean mCurrentCameraIsBack;
 
-    private void sdcardStart(){
-        if (mPushView != null && mPushView.getChildCount() > 1){
+    private void sdcardStart() {
+        if (mPushView != null && mPushView.getChildCount() > 1) {
             mPushView.removeViewAt(0);
         }
 
@@ -2743,11 +2999,10 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         // 默认显示身份证正面
         mPushView.addView(sdcardView, 0);
         // 当前相机方向，切换摄像头，mIsBackCamera
-        if (!mCurrentCameraIsBack){
-            if (mAgoraRtcEngine != null){
+        if (!mCurrentCameraIsBack) {
+            if (mAgoraRtcEngine != null) {
                 int i = mAgoraRtcEngine.switchCamera();
                 mCurrentCameraIsBack = i == 0;
-                Log.e("yyyyyyyyy","切换相机状态 = "+(i == 0));
             }
         }
 
@@ -2756,19 +3011,18 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         showAndHidden(mPushView, true);
     }
 
-    private void sdcardEnd(){
+    private void sdcardEnd() {
         // 恢复显示
-        if (mIsBackCamera){
-            if (!mCurrentCameraIsBack){
-                if (mAgoraRtcEngine != null){
+        if (mIsBackCamera) {
+            if (!mCurrentCameraIsBack) {
+                if (mAgoraRtcEngine != null) {
                     int i = mAgoraRtcEngine.switchCamera();
                     mCurrentCameraIsBack = i == 0;
-                    Log.e("yyyyyyyyy","切换相机状态 = "+(i == 0));
                 }
             }
-        }else {
-            if (mCurrentCameraIsBack){
-                if (mAgoraRtcEngine != null){
+        } else {
+            if (mCurrentCameraIsBack) {
+                if (mAgoraRtcEngine != null) {
                     int i = mAgoraRtcEngine.switchCamera();
                     mCurrentCameraIsBack = i != 0;
                 }
@@ -2780,39 +3034,36 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         showAndHidden(mPushView, false);
     }
 
-    private void signature(String flowId){
+    private void signature(String flowId) {
         View signatureViewC = View.inflate(getApplicationContext(), R.layout.item_signature, null);
         SignatureView signatureView = signatureViewC.findViewById(R.id.signatureView);
         SignatureTextView hintTv = signatureViewC.findViewById(R.id.hintTv);
         signatureViewC.findViewById(R.id.okTv).setOnClickListener(v -> {
 
-            if (signatureView.isBitmapEmpty()){
-                showToast("请先进行签名！");
+            if (signatureView.isBitmapEmpty()) {
+                showToast(Utils.getString(getApplicationContext(), R.string.vec_please_sign));
                 return;
             }
 
             // 保存签名到本地
             Bitmap bitmap = signatureView.getSignatureBitmap();
-            File file = Utils.saveImage(getApplicationContext(), String.format("signature_%s.png",ChatClient.getInstance().tenantId()), bitmap);
-            Log.e("ppppppppp","file exists = "+file.exists());
-            showDialog("正在上传数据...");
+            File file = Utils.saveImage(getApplicationContext(), String.format("signature_%s.png", ChatClient.getInstance().tenantId()), bitmap);
+            showDialog(Utils.getString(getApplicationContext(), R.string.vec_uploading_data));
 
-            AgoraMessage.asyncUploadSignatureImage(file, AgoraMessage.getToken(),ChatClient.getInstance().tenantId(),flowId,  new ValueCallBack<String>() {
+            AgoraMessage.asyncUploadSignatureImage(file, AgoraMessage.getToken(), ChatClient.getInstance().tenantId(), flowId, new ValueCallBack<String>() {
                 @Override
                 public void onSuccess(String value) {
                     closeDialog();
-                    Log.e("rrrrrrrrrrrr","onSuccess = "+value);
-                    File vecPath = Utils.getVecPath(getApplicationContext(), String.format("signature_%s.png",ChatClient.getInstance().tenantId()));
-                    if (vecPath.exists()){
-                        boolean delete = vecPath.delete();
-                        Log.e("rrrrrrrrrrrr","delete = "+delete);
+                    File vecPath = Utils.getVecPath(getApplicationContext(), String.format("signature_%s.png", ChatClient.getInstance().tenantId()));
+                    if (vecPath.exists()) {
+                        vecPath.delete();
                     }
 
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             // 恢复显示
-                            if (isFinishing()){
+                            if (isFinishing()) {
                                 return;
                             }
                             signatureEnd();
@@ -2822,7 +3073,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
                 @Override
                 public void onError(int error, String errorMsg) {
-                    if (isFinishing()){
+                    if (isFinishing()) {
                         return;
                     }
                     closeDialog();
@@ -2836,8 +3087,6 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         });
 
 
-        // 隐藏远程视频容器
-        //showAndHidden(mMembersContainer, false);
         // 隐藏底部导航容器
         showAndHidden(mBottomContainerView, false);
         // 隐藏本地名称
@@ -2851,7 +3100,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
     }
 
-    private void signatureEnd(){
+    private void signatureEnd() {
         mPushView.removeViewAt(0);
         showAndHidden(mPushView, false);
 
@@ -2859,17 +3108,15 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         showAndHidden(mLocalNameC, true);
     }
 
-    private void getAsyncVisitorId(){
+    private void getAsyncVisitorId() {
         AgoraMessage.getAsyncVisitorIdAndVecSessionId(AgoraMessage.newAgoraMessage().getCurrentChatUsername(), new ValueCallBack<String>() {
             @Override
             public void onSuccess(String args) {
-                Log.e("rrrrrrrrrr","args = "+args);
                 VecConfig.newVecConfig().setVisitorId(args);
             }
 
             @Override
             public void onError(int error, String errorMsg) {
-                Log.e("rrrrrrrrrr","errorMsg = "+errorMsg);
             }
         });
     }

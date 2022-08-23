@@ -55,7 +55,7 @@
 
             <TextView
                 android:id="@+id/okTv"
-                android:text="提交"
+                android:text="@string/vec_submit"
                 android:layout_marginBottom="6dp"
                 android:layout_marginRight="6dp"
                 android:paddingRight="@dimen/dp_30"

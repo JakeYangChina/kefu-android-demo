@@ -29,7 +29,6 @@ public class NavActivity extends Activity {
             mContent.getViewTreeObserver().removeOnGlobalLayoutListener(mOnGlobalLayoutListener);
             int navHeight = getNav(mWm, mContent, mPoint);
             CloudCallbackUtils.newCloudCallbackUtils().updateNav(navHeight, mIsBack);
-            Log.e("aaaaaaaaaa","navHeight = "+navHeight);
             NavActivity.this.finish();
         }
     };

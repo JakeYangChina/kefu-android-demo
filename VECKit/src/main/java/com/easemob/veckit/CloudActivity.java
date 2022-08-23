@@ -14,7 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.easemob.veckit.utils.CloudCallbackUtils;
 import com.easemob.veckit.utils.GetRealFilePathFromUri;
-import com.hyphenate.helpdesk.util.Log;
+import com.easemob.veckit.utils.Utils;
 import com.hyphenate.util.UriUtils;
 import com.hyphenate.util.VersionUtils;
 
@@ -65,7 +65,7 @@ public class CloudActivity extends AppCompatActivity implements View.OnClickList
                 if (!mIsClick){
                     CloudCallbackUtils.newCloudCallbackUtils().notifyShow();
                 }
-            }, 50);
+            }, 200);
         }
 
     }
@@ -105,7 +105,6 @@ public class CloudActivity extends AppCompatActivity implements View.OnClickList
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Log.e("rrrrrr","=======");
         // content://media/external/images/media/1560226
         if (mIsFloatingType){
             floatingType(data);
@@ -119,12 +118,11 @@ public class CloudActivity extends AppCompatActivity implements View.OnClickList
             Uri selectedImage = data.getData();
             if (selectedImage != null){
                 mRealPathFromUri = GetRealFilePathFromUri.getFileAbsolutePath(this, selectedImage);
-                Log.e("oooooooo","url getFilePathFromUri = "+mRealPathFromUri);
                 if (mRealPathFromUri != null){
                     /*File file = new File(mRealPathFromUri);
                     Log.e("oooooooo","url exists = "+file.exists());*/
                     if (mClickType != getFileTypeByFilePath(mRealPathFromUri)){
-                        Toast.makeText(this, "请选类型为"+getFileTypeName(mClickType)+"格式", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, String.format(Utils.getString(getApplicationContext(), R.string.vec_please_select_type),getFileTypeName(mClickType)), Toast.LENGTH_LONG).show();
                         return;
                     }
                 }else {
@@ -145,12 +143,10 @@ public class CloudActivity extends AppCompatActivity implements View.OnClickList
             Uri selectedImage = data.getData();
             if (selectedImage != null){
                 mRealPathFromUri = GetRealFilePathFromUri.getFileAbsolutePath(this, selectedImage);
-                Log.e("oooooooo","url getFilePathFromUri = "+mRealPathFromUri);
                 if (mRealPathFromUri != null){
-                    File file = new File(mRealPathFromUri);
-                    Log.e("oooooooo","url exists = "+file.exists());
+                    // File file = new File(mRealPathFromUri);
                     if (mClickType != getFileTypeByFilePath(mRealPathFromUri)){
-                        Toast.makeText(this, "请选类型为"+getFileTypeName(mClickType)+"格式", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, String.format(Utils.getString(getApplicationContext(), R.string.vec_please_select_type),getFileTypeName(mClickType)), Toast.LENGTH_LONG).show();
                         return;
                     }
                 }else {

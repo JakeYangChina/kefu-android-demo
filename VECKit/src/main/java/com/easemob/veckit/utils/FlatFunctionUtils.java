@@ -8,6 +8,7 @@ import java.util.List;
 public class FlatFunctionUtils {
     private static FlatFunctionUtils sFlatFunctionUtils;
     private List<FunctionIconItem> mIconItems = new ArrayList<>();
+    private volatile boolean mIsEnable;
     private FlatFunctionUtils(){
 
     }
@@ -21,8 +22,10 @@ public class FlatFunctionUtils {
 
     public void setIconItems(List<FunctionIconItem> iconItems){
         if (mIconItems != null){
-            mIconItems.clear();
-            mIconItems.addAll(iconItems);
+            synchronized (FlatFunctionUtils.class){
+                mIconItems.clear();
+                mIconItems.addAll(iconItems);
+            }
         }
     }
 
@@ -31,6 +34,16 @@ public class FlatFunctionUtils {
     }
 
     public void clear(){
-        mIconItems.clear();
+        synchronized (FlatFunctionUtils.class){
+            mIconItems.clear();
+        }
+    }
+
+    public void setVideoSwitch(boolean isEnable) {
+        this.mIsEnable = isEnable;
+    }
+
+    public boolean isEnableVideo() {
+        return mIsEnable;
     }
 }

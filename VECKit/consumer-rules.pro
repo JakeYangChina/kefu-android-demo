@@ -16,8 +16,10 @@
 -dontwarn  com.easemob.veckit.**
 
 
-
-
+# 声网
+-keep class io.agora.**{*;}
+# Agora Whiteboard
+-keep class com.herewhite.** { *; }
 
 
 

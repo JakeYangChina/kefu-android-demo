@@ -4,22 +4,35 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.WrapperListAdapter;
 
 import androidx.annotation.Nullable;
 
 import com.easemob.veckit.R;
+import com.easemob.veckit.utils.Utils;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class BottomContainerView extends LinearLayout implements View.OnClickListener {
     private List<ViewIconData> mDataList;
     private int mHeight;
+
+    public BottomContainerView(Context context, int height) {
+        super(context);
+        mHeight = height;
+        init();
+    }
 
     public BottomContainerView(Context context) {
         super(context);
@@ -40,7 +53,9 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
         setOrientation(HORIZONTAL);
         setGravity(Gravity.CENTER_VERTICAL);
         setBackgroundColor(Color.WHITE);
-        mHeight = getResources().getDimensionPixelSize(R.dimen.dp_62);
+        if (mHeight == 0){
+            mHeight = getResources().getDimensionPixelSize(R.dimen.bottom_nav_height);
+        }
         if (mDataList == null){
             mDataList = new ArrayList<>();
         }
@@ -51,8 +66,7 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int width = MeasureSpec.getSize(widthMeasureSpec);
         int widthMode = MeasureSpec.getMode(widthMeasureSpec);
-        int heightMode = MeasureSpec.getMode(heightMeasureSpec);
-        setMeasuredDimension(MeasureSpec.makeMeasureSpec(width, widthMode), MeasureSpec.makeMeasureSpec(mHeight, heightMode));
+        setMeasuredDimension(MeasureSpec.makeMeasureSpec(width, widthMode), MeasureSpec.makeMeasureSpec(mHeight, MeasureSpec.EXACTLY));
     }
 
     @Override
@@ -69,7 +83,11 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
         clear();
     }
 
-    private void clear(){
+    void clear(){
+        if (mViewMap != null){
+            mViewMap.clear();
+        }
+
         for (int i = 0; i < getChildCount(); i++){
             View childAt = getChildAt(i);
             childAt.setTag(null);
@@ -96,12 +114,89 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
         for (int i = 0; i < mDataList.size(); i++){
             ViewIconData iconData = mDataList.get(i);
             iconData.mIndex = i;
-            addView(createView(iconData));
+            addView(createView(i, iconData));
         }
 
     }
 
+    public void addIconsFive(List<ViewIconData> icons){
+        if (icons == null){
+            throw new RuntimeException("icons is null.");
+        }
+
+        clear();
+        mDataList.addAll(icons);
+        FrameLayout c1 = createC();
+        FrameLayout c2 = createC();
+        FrameLayout center = createCenter();
+        FrameLayout c4 = createC();
+        FrameLayout c5 = createC();
+        ViewIconData data_one = mDataList.get(0);
+        data_one.mIndex = 0;
+        addView(createViewC(c1, 0, data_one));
+
+        ViewIconData data_two = mDataList.get(1);
+        data_two.mIndex = 1;
+        addView(createViewC(c2, 1, data_two));
+
+        ViewIconData data_three = mDataList.get(2);
+        data_three.mIndex = 2;
+        addView(createViewC(center, 2, data_three));
+
+        ViewIconData data_four = mDataList.get(3);
+        data_four.mIndex = 3;
+        addView(createViewC(c4, 3, data_four));
+
+        ViewIconData data_five = mDataList.get(4);
+        data_five.mIndex = 4;
+        addView(createViewC(c5, 4, data_five));
+
+        /*if (mDataList.size() > 5){
+            for (int i = 5; i < mDataList.size(); i++){
+                ViewIconData iconData = mDataList.get(i);
+                iconData.mIndex = i;
+                createView(i, iconData);
+            }
+        }*/
+    }
+
+    View getCenterView(){
+        ViewGroup childAt = (ViewGroup) getChildAt(2);
+        childAt.setOnClickListener(null);
+        View view = childAt.getChildAt(0);
+        childAt.removeAllViews();
+        mViewMap.remove(2);
+
+
+
+        FrameLayout f = new FrameLayout(getContext());
+        f.setOnClickListener(this);
+        f.setTag(mDataList.get(2));
+        f.setPadding(Utils.dp2px(getContext(), 12),Utils.dp2px(getContext(), 12), Utils.dp2px(getContext(), 12),Utils.dp2px(getContext(), 12));
+
+
+
+        View v = new View(getContext());
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(Utils.dp2px(getContext(), 40), Utils.dp2px(getContext(), 40));
+        params.gravity = Gravity.CENTER;
+        v.setLayoutParams(params);
+        v.setBackgroundResource(R.drawable.hd_write_shape);
+        f.addView(v);
+
+
+        f.addView(view);
+
+        f.measure(0,0);
+        ViewGroup.LayoutParams layoutParams = childAt.getLayoutParams();
+        layoutParams.width = f.getMeasuredWidth();
+
+        return f;
+    }
+
     public void setCustomItemState(int index, boolean isSelect){
+        if (index >= mDataList.size()){
+            return;
+        }
         ViewIconData data = mDataList.get(index);
         data.mState = isSelect;
         if (isSelect){
@@ -127,11 +222,11 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
         return mDataList.get(index).mTextView;
     }
 
-    private View createView(ViewIconData iconData){
-        LinearLayout c = createC();
+    private View createViewC(FrameLayout c, int index, ViewIconData iconData){
         c.setTag(iconData);
         IconTextView textView = new IconTextView(getContext());
-        LayoutParams layoutParams = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        layoutParams.gravity = Gravity.CENTER;
         textView.setLayoutParams(layoutParams);
         textView.setText(iconData.mDefaultIcon);
         textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, iconData.mSize);
@@ -153,15 +248,108 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
         }
         c.addView(textView);
         iconData.mTextView = textView;
+        if (iconData.mIsHasNum){
+            c.addView(createNumView(index));
+        }
+        return c;
+    }
+    private View createView(int index, ViewIconData iconData){
+        FrameLayout c = createC();
+        c.setTag(iconData);
+        IconTextView textView = new IconTextView(getContext());
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        layoutParams.gravity = Gravity.CENTER;
+        textView.setLayoutParams(layoutParams);
+        textView.setText(iconData.mDefaultIcon);
+        textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, iconData.mSize);
+        if (iconData.mIsClickState){
+            //状态
+            int[][] states = new int[2][];
+            //按下
+            states[0] = new int[] {android.R.attr.state_pressed};
+            //默认
+            states[1] = new int[] {};
+
+            //状态对应颜色值（按下，默认）
+            int[] colors = new int[] { Color.parseColor(iconData.mPressIconColor), Color.parseColor(iconData.mDefaultIconColor)};
+
+            ColorStateList colorStateList = new ColorStateList(states, colors);
+            textView.setTextColor(colorStateList);
+        }else {
+            textView.setTextColor(Color.parseColor(iconData.mDefaultIconColor));
+        }
+        c.addView(textView);
+        iconData.mTextView = textView;
+        if (iconData.mIsHasNum){
+            c.addView(createNumView(index));
+        }
         return c;
     }
 
-    private LinearLayout createC(){
-        LinearLayout linearLayout = new LinearLayout(getContext());
-        linearLayout.setOrientation(VERTICAL);
-        linearLayout.setGravity(Gravity.CENTER);
+    private Map<Integer, TextView> mViewMap = new HashMap<>();
+    private View createNumView(int index){
+        TextView textView = new TextView(getContext());
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+        layoutParams.gravity = Gravity.END|Gravity.TOP;
+        textView.setLayoutParams(layoutParams);
+        textView.setGravity(Gravity.CENTER);
+        textView.setVisibility(GONE);
+
+        int px = Utils.dp2px(getContext(), 2);
+        textView.setPadding(px, px, px, px);
+
+        textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
+        textView.setTextColor(Color.WHITE);
+        textView.setBackgroundResource(R.drawable.num_corners_bg);
+        mViewMap.put(index, textView);
+        return textView;
+    }
+
+    void showNum(int index, int num){
+        TextView textView = mViewMap.get(index);
+        if (textView == null){
+            return;
+        }
+        if (num <= 0){
+            if (textView.getVisibility() == VISIBLE){
+                textView.setVisibility(GONE);
+            }
+        }else if (num > 99){
+            if (textView.getVisibility() != VISIBLE){
+                textView.setVisibility(VISIBLE);
+            }
+            FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) textView.getLayoutParams();
+            layoutParams.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+            layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+            layoutParams.topMargin = Utils.dp2px(getContext(), 4);
+            layoutParams.rightMargin = Utils.dp2px(getContext(), 10);
+            textView.setText("99+");
+        }else {
+            if (textView.getVisibility() != VISIBLE){
+                textView.setVisibility(VISIBLE);
+            }
+            FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) textView.getLayoutParams();
+            int size = Utils.dp2px(getContext(), 16);
+            layoutParams.topMargin = Utils.dp2px(getContext(), 4);
+            layoutParams.rightMargin = Utils.dp2px(getContext(), 10);
+            layoutParams.width = size;
+            layoutParams.height = size;
+            textView.setText(String.valueOf(num));
+        }
+    }
+
+    private FrameLayout createC(){
+        FrameLayout linearLayout = new FrameLayout(getContext());
         LayoutParams layoutParams = new LayoutParams(0, LayoutParams.MATCH_PARENT);
         layoutParams.weight = 1;
+        linearLayout.setLayoutParams(layoutParams);
+        linearLayout.setOnClickListener(this);
+        return linearLayout;
+    }
+
+    private FrameLayout createCenter(){
+        FrameLayout linearLayout = new FrameLayout(getContext());
+        LayoutParams layoutParams = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
         linearLayout.setLayoutParams(layoutParams);
         linearLayout.setOnClickListener(this);
         return linearLayout;
@@ -212,6 +400,10 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
         }
     }
 
+    public OnViewPressStateListener getOnViewPressStateListener(){
+        return mListener;
+    }
+
     private OnViewPressStateListener mListener;
     public void setOnBottomContainerViewPressStateListener(OnViewPressStateListener listener){
         this.mListener = listener;
@@ -232,6 +424,10 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
         public static final String TYPE_ITEM_SHARE = "share";
         // 电子白板
         public static final String TYPE_ITEM_FLAT = "flat";
+        // 消息
+        public static final String TYPE_ITEM_MESSAGE = "message";
+        // 更多
+        public static final String TYPE_ITEM_MORE = "more";
 
         String mDefaultIcon = "";
         String mDefaultIconColor = "#000000";
@@ -240,15 +436,29 @@ public class BottomContainerView extends LinearLayout implements View.OnClickLis
         boolean mIsClickState;
         String mPressIcon = "";
         String mPressIconColor = "#ff4400";
-        int mSize = 36;
+        int mSize = 32;
         int mIndex;
         boolean mState;
+
+        boolean mIsHasNum;
 
         TextView mTextView;
 
         boolean mIsCustomState;
 
         String mName;
+
+        public boolean isCustomState() {
+            return mIsCustomState;
+        }
+
+        public boolean isClickState() {
+            return mIsClickState;
+        }
+
+        public void setHasNum(boolean hasNum) {
+            mIsHasNum = hasNum;
+        }
 
         public ViewIconData(String defaultIcon, String defaultIconColor, String pressIcon, String pressIconColor,
                             boolean isClickState, String name){

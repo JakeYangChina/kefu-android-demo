@@ -214,7 +214,7 @@
             <!--视频通话-->
             <TextView
                 android:textColor="@android:color/white"
-                android:text="视频通话"
+                android:text="@string/vec_video_call"
                 android:layout_marginTop="36dp"
                 android:gravity="center"
                 android:layout_width="match_parent"
@@ -247,7 +247,7 @@
 
                 <TextView
                     android:layout_marginTop="10dp"
-                    android:text="客服邀请您进行视频通话"
+                    android:text="@string/vec_visitor_to_agent"
                     android:textColor="@android:color/white"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>
@@ -276,6 +276,15 @@
 
         </FrameLayout>
 
+        <TextView
+            android:visibility="gone"
+            android:id="@+id/focusTv"
+            android:background="@drawable/hd_focus"
+            android:layout_centerVertical="true"
+            android:layout_centerHorizontal="true"
+            android:layout_width="@dimen/dp_82"
+            android:layout_height="@dimen/dp_82"/>
+
         <!--视频未接通，主动-->
         <FrameLayout
             android:visibility="gone"
@@ -298,7 +307,7 @@
             <!--视频通话-->
             <TextView
                 android:textColor="@android:color/white"
-                android:text="视频通话"
+                android:text="@string/vec_video_call"
                 android:layout_marginTop="36dp"
                 android:gravity="center"
                 android:layout_width="match_parent"
@@ -324,7 +333,7 @@
 
                 <TextView
                     android:layout_marginTop="10dp"
-                    android:text="您正邀请客服进行视频通话"
+                    android:text="@string/vec_agent_to_visitor"
                     android:textColor="@android:color/white"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"/>

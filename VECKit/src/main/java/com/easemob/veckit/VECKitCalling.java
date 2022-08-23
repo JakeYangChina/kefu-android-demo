@@ -10,10 +10,15 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
+import com.easemob.veckit.utils.FlatFunctionUtils;
+import com.easemob.veckit.utils.Utils;
+import com.google.gson.JsonObject;
+import com.hyphenate.agora.FunctionIconItem;
 import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
 import com.hyphenate.chat.ChatManager;
 import com.hyphenate.chat.EMCmdMessageBody;
+import com.hyphenate.chat.EMTextMessageBody;
 import com.hyphenate.chat.Message;
 import com.hyphenate.chat.VecConfig;
 import com.hyphenate.helpdesk.callback.ValueCallBack;
@@ -21,6 +26,8 @@ import com.hyphenate.helpdesk.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.List;
 
 public class VECKitCalling extends Activity {
 
@@ -38,14 +45,19 @@ public class VECKitCalling extends Activity {
         context.startActivity(intent);
     }
 
-    @Override
-    public void onBackPressed() {
-
+    // 满意度评价
+    public static void callingRetry(Context context, String content){
+        CallVideoActivity.startDialogTypeRetry(context, content);
     }
 
     // 被动请求
     public static void callingResponse(Context context, Intent intent){
         CallVideoActivity.callingResponse(context, intent);
+    }
+
+    @Override
+    public void onBackPressed() {
+
     }
 
     @Override
@@ -56,55 +68,79 @@ public class VECKitCalling extends Activity {
         mDialog = new ProgressDialog(this);
         mDialog.setCanceledOnTouchOutside(false);
         mDialog.setCancelable(false);
-        mDialog.setMessage("正在加载...");
-        mDialog.show();
-        request();
-    }
+        mDialog.setMessage(Utils.getString(getApplicationContext(), R.string.vec_loading));
 
-    private void request() {
-        String tenantId = ChatClient.getInstance().tenantId();// "77556"
+
+        // 请求灰度
+        // getTenantIdFunctionIcons();
+
         String configId = ChatClient.getInstance().getConfigId();
         if (TextUtils.isEmpty(configId)){
-            mDialog.dismiss();
-            Toast.makeText(this, "请先到设置页面进行扫码关联用户获取configId", Toast.LENGTH_LONG).show();
+            Toast.makeText(VECKitCalling.this, Utils.getString(getApplicationContext(), R.string.vec_config_setting), Toast.LENGTH_LONG).show();
             finish();
             return;
         }
-        AgoraMessage.asyncInitStyle(tenantId, configId, new ValueCallBack<String>() {
-            @Override
-            public void onSuccess(String value) {
-                try {
-                    Log.e("aaaaaaaaaa","value = "+value);
-                    JSONObject jsonObject = new JSONObject(value);
-                    if (!jsonObject.has("status")){
-                        return;
-                    }
-                    String status = jsonObject.getString("status");
-                    if (!"ok".equalsIgnoreCase(status)){
-                        return;
-                    }
 
-                    // 存起来
-                    JSONObject entity = jsonObject.getJSONObject("entity");
-                    if (isFinishing()){
-                        return;
-                    }
-
-                    String json = entity.toString();
-                    to(json);
-
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-
+        mDialog.show();
+        if (VecConfig.newVecConfig().isEnableVideo()){
+            requestInfo();
+        }else {
+            showToast(VECKitCalling.this,Utils.getString(getApplicationContext(), R.string.vec_no_permission));
+            if (mDialog != null && mDialog.isShowing()){
+                mDialog.dismiss();
             }
+            finish();
+        }
+    }
 
+    private void request() {
+        runOnUiThread(new Runnable() {
             @Override
-            public void onError(int error, String errorMsg) {
-                Log.e("aaaaaaaaaaa","error = "+error+"， errorMsg = "+errorMsg);
-                to("");
+            public void run() {
+                String tenantId = ChatClient.getInstance().tenantId();// "77556"
+                String configId = ChatClient.getInstance().getConfigId();
+                if (TextUtils.isEmpty(configId)){
+                    mDialog.dismiss();
+                    Toast.makeText(VECKitCalling.this, Utils.getString(getApplicationContext(), R.string.vec_config_setting), Toast.LENGTH_LONG).show();
+                    finish();
+                    return;
+                }
+                AgoraMessage.asyncInitStyle(tenantId, configId, new ValueCallBack<String>() {
+                    @Override
+                    public void onSuccess(String value) {
+                        try {
+                            JSONObject jsonObject = new JSONObject(value);
+                            if (!jsonObject.has("status")){
+                                return;
+                            }
+                            String status = jsonObject.getString("status");
+                            if (!"ok".equalsIgnoreCase(status)){
+                                return;
+                            }
+
+                            // 存起来
+                            JSONObject entity = jsonObject.getJSONObject("entity");
+                            if (isFinishing()){
+                                return;
+                            }
+
+                            String json = entity.toString();
+                            to(json);
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+
+                    @Override
+                    public void onError(int error, String errorMsg) {
+                        to("");
+                    }
+                });
             }
         });
+
     }
 
     private void to(String json){
@@ -115,9 +151,77 @@ public class VECKitCalling extends Activity {
         });
     }
 
+    // 座席端请求视频，访客接通
+    public static void acceptCallFromZuoXi(String content){
+        String toUserName = AgoraMessage.newAgoraMessage().getCurrentChatUsername();
+        Message message = Message.createSendMessage(Message.Type.TXT);
+        message.setBody(new EMTextMessageBody(content));
+        message.setTo(toUserName);
+        try {
+            JSONObject object = new JSONObject();
+            JSONObject visitorRejectInvitation = new JSONObject();
+            visitorRejectInvitation.put("msg",content);
+            object.put("visitorAcceptInvitation",visitorRejectInvitation);
+            message.setAttribute("type","agorartcmedia/video");
+            message.setAttribute("msgtype",object);
+            message.setAttribute("targetSystem","kefurtc");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        ChatManager.getInstance().sendMessage(message);
+        VecConfig.newVecConfig().setIsOnLine(true);
+    }
+
+    // 坐席发起邀请，未接通，访客挂断
+    public static void endCallFromZuoXi(String content){
+        String toUserName = AgoraMessage.newAgoraMessage().getCurrentChatUsername();
+
+        Message message = Message.createSendMessage(Message.Type.TXT);
+        message.setBody(new EMTextMessageBody(content));
+        message.setTo(toUserName);
+
+        try {
+            JSONObject object = new JSONObject();
+            JSONObject visitorRejectInvitation = new JSONObject();
+            visitorRejectInvitation.put("msg",content);
+            object.put("visitorRejectInvitation",visitorRejectInvitation);
+            message.setAttribute("type","agorartcmedia/video");
+            message.setAttribute("msgtype",object);
+            message.setAttribute("targetSystem","kefurtc");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        ChatManager.getInstance().sendMessage(message);
+        VecConfig.newVecConfig().setIsOnLine(false);
+    }
+
+
+    /*private void test(String toUserName){
+        Message message = Message.createSendMessage(Message.Type.CMD);
+        message.setBody(new EMCmdMessageBody(""));
+        message.setTo(toUserName);
+
+        // 例如：拼接数据到，把 weichat 字段拼接到ext里
+        *//*"ext": {
+            "weichat": {
+                "routingRuleFlag":"业务标识1"
+            }
+        }*//*
+
+        try {
+            JSONObject weichat = new JSONObject();
+            weichat.put("routingRuleFlag","业务标识1");
+
+            message.setAttribute("weichat",weichat);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        ChatManager.getInstance().sendMessage(message);
+    }*/
+
     // 接通挂断
     public static void endCallFromOn(ValueCallBack<String> callBack){
-        Log.e("rrrrrrrrrrrr","aaaa visitorId = "+VecConfig.newVecConfig().getVisitorId());
         AgoraMessage.closeVec(ChatClient.getInstance().tenantId(), VecConfig.newVecConfig().getSessionId(),
                 VecConfig.newVecConfig().getVisitorId(), callBack);
     }
@@ -130,12 +234,41 @@ public class VECKitCalling extends Activity {
         VecConfig.newVecConfig().setIsOnLine(false);
     }
 
-    // 未接通挂断
-    /*public static void endCallResponseFromOff(int callId){
-        String to = AgoraMessage.newAgoraMessage().getCurrentChatUsername();
-        Message message = responseOffMessage(callId, to);
+    public static void sendNotify(String action, String type, String state, String msg) {
+        String toUserName = AgoraMessage.newAgoraMessage().getCurrentChatUsername();
+        Message message = Message.createSendMessage(Message.Type.CMD);
+        message.setBody(new EMCmdMessageBody(action));
+        message.setTo(toUserName);
+        try {
+            JSONObject obj = new JSONObject();
+            JSONObject flashlightcallback = new JSONObject();
+            flashlightcallback.put("action",state);
+            obj.put("msg",msg);
+            obj.put(type,flashlightcallback);
+
+            message.setAttribute("type","agorartcmedia/video");
+            message.setAttribute("msgtype",obj);
+            message.setAttribute("targetSystem","kefurtc");
+
+
+
+
+            JSONObject test = new JSONObject();
+            test.put("type","agorartcmedia/video");
+            test.put("msgtype",obj);
+            test.put("targetSystem","kefurtc");
+
+
+
+
+            Log.e("uuuuuuuuuuuuuu","test = "+test.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e("uuuuuuuuuuuuuu","e = "+e.toString());
+        }
         ChatManager.getInstance().sendMessage(message);
-    }*/
+        Log.e("yyyyyyyyyyy","发送成功");
+    }
 
     // 接通，挂断，或者未接通挂断
     @SuppressWarnings("SameParameterValue")
@@ -160,24 +293,71 @@ public class VECKitCalling extends Activity {
         return message;
     }
 
-    // 座席端请求视频，未接通，挂断
-    /*private static Message responseOffMessage(int callId, String toUserName){
-        Message message = Message.createSendMessage(Message.Type.CMD);
-        message.setBody(new EMCmdMessageBody(""));
-        message.setTo(toUserName);
+    private void getTenantIdFunctionIcons(){
+        // 动态获取功能按钮，在视频页面使用到
+        AgoraMessage.asyncGetTenantIdFunctionIcons(ChatClient.getInstance().tenantId(), new ValueCallBack<List<FunctionIconItem>>() {
+            @Override
+            public void onSuccess(List<FunctionIconItem> value) {
+                FlatFunctionUtils.get().setIconItems(value);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (VecConfig.newVecConfig().isEnableVideo()){
+                            requestInfo();
+                        }else {
+                            showToast(VECKitCalling.this,Utils.getString(getApplicationContext(), R.string.vec_no_permission));
+                            finish();
+                        }
+                    }
+                });
+            }
 
+            @Override
+            public void onError(int error, String errorMsg) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        showToast(VECKitCalling.this,Utils.getString(getApplicationContext(), R.string.vec_request_fail));
+                        finish();
+                    }
+                });
+            }
+        });
+    }
+
+    private void requestInfo() {
+        AgoraMessage.asyncGetInfo(ChatClient.getInstance().tenantId(), new ValueCallBack<String>() {
+            @Override
+            public void onSuccess(String value) {
+                parseInfoData(value);
+                request();
+            }
+
+            @Override
+            public void onError(int error, String errorMsg) {
+                request();
+            }
+        });
+    }
+
+    private void parseInfoData(String value) {
         try {
-            JSONObject object = new JSONObject();
-            JSONObject call = new JSONObject();
-            call.put("callId",((callId > 0) ? String.valueOf(callId):"null"));
-            object.put("visitorRejectInvitation",call);
-
-            message.setAttribute("type","agorartcmedia/video");
-            message.setAttribute("msgtype",object);
-            message.setAttribute("targetSystem", "kefurtc");
-        } catch (JSONException e) {
+            JSONObject data = new JSONObject(value);
+            JSONObject entity = data.getJSONObject("entity");
+            /*String avatar = entity.getString("avatar");
+            String logo = entity.getString("logo");*/
+            VecConfig.newVecConfig().setTenantName(entity.getString("name"));
+            String avatar = entity.getString("avatar");
+            int i = avatar.indexOf("kefu.easemob.com");
+            String substring = avatar.substring(i + "kefu.easemob.com".length());
+            Log.e("wwwwwwwwwwwwww","substring = "+ChatClient.getInstance().kefuRestServer().concat(substring));
+            VecConfig.newVecConfig().setAvatarImage(ChatClient.getInstance().kefuRestServer().concat(substring));
+        }catch (Exception e){
             e.printStackTrace();
         }
-        return message;
-    }*/
+    }
+
+    private void showToast(Context context, String content){
+        Toast.makeText(context.getApplicationContext(), content, Toast.LENGTH_LONG).show();
+    }
 }

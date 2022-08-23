@@ -31,6 +31,8 @@ import android.view.WindowManager;
 
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
+
+import com.easemob.veckit.utils.FlatFunctionUtils;
 import com.hyphenate.helpdesk.Error;
 import com.easemob.bottomnavigation.BottomNavigation;
 import com.easemob.bottomnavigation.OnBottomNavigationSelectedListener;
@@ -39,7 +41,6 @@ import com.easemob.helpdeskdemo.DemoHelper;
 import com.easemob.helpdeskdemo.HMSPushHelper;
 import com.easemob.helpdeskdemo.Preferences;
 import com.easemob.helpdeskdemo.R;
-import com.easemob.helpdeskdemo.utils.FlatFunctionUtils;
 import com.hyphenate.agora.FunctionIconItem;
 import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
@@ -104,7 +105,6 @@ public class MainActivity extends DemoBaseActivity implements OnBottomNavigation
             } catch (Exception ignored) {
                 //锤子手机会报找不到这个Activity
                 //android.content.ActivityNotFoundException: No Activity found to handle Intent { act=android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS dat=package:com.easemob.helpdeskdemo }
-
             }
 
         }

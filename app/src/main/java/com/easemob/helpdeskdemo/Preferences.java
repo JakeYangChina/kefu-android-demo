@@ -17,7 +17,8 @@ public class Preferences {
 	static private String KEY_NICKNAME = "nickname";
 	static private String KEY_TENANT_ID = "tenantId";
 	static private String KEY_PROJECT_ID = "projectId";
-	
+	static private String KEY_USER_NAME = "key_user_name";
+
 	private SharedPreferences pref = null;
 	private SharedPreferences.Editor editor = null;
 	
@@ -112,6 +113,13 @@ public class Preferences {
     	}
     	return val.toLowerCase(Locale.getDefault());
     }
-    
-    
+
+
+	public void saveLoginUserName(String uname) {
+		editor.putString(KEY_USER_NAME, uname).commit();
+	}
+
+	public String getLoginUserName(){
+    	return pref.getString(KEY_USER_NAME,"");
+	}
 }

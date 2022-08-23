@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.easemob.veckit">
-
+    <!-- 悬浮窗所需权限 -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <application>
         <activity android:name=".CallVideoActivity"
             android:configChanges="orientation"
@@ -10,6 +13,10 @@
             android:theme="@style/translucent_style_vec"/>
 
         <activity android:name=".CloudActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/ligtht_default_style"/>
+
+        <activity android:name=".BlankActivity"
             android:screenOrientation="portrait"
             android:theme="@style/default_style"/>
 
@@ -27,6 +34,10 @@
             android:screenOrientation="portrait"
             android:launchMode="singleTask"
             android:theme="@style/translucent_style_vec" />
+
+        <activity android:name=".ShowBigImageActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/default_style"/>
 
         <service android:name=".VideoCallWindowService" />
     </application>

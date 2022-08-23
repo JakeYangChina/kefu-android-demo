@@ -217,7 +217,6 @@ public class FileConverter {
                             }
 
                             String entity = object.getString("entity");
-                            Log.e("tttttttttttt","queryInfo.status = "+entity);
                             QueryInfo queryInfo = gson.fromJson(entity, QueryInfo.class);
                             ConversionInfo info = queryInfo.progress;
                             if (info == null){
@@ -225,7 +224,6 @@ public class FileConverter {
                                 onFailure(-1, "");
                                 return;
                             }
-                            Log.e("tttttttttttt","queryInfo.status = "+queryInfo.status);
                             ConversionInfo.ServerConversionStatus status = queryInfo.status;
                             if (status == ConversionInfo.ServerConversionStatus.Fail || status == ConversionInfo.ServerConversionStatus.NotFound) {
                                 FileConverter.this.status = ConverterStatus.Fail;

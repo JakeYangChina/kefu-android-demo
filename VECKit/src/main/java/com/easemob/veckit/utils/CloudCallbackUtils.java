@@ -1,5 +1,7 @@
 package com.easemob.veckit.utils;
 
+import android.content.Intent;
+
 import com.hyphenate.chat.Message;
 
 public class CloudCallbackUtils {
@@ -28,6 +30,12 @@ public class CloudCallbackUtils {
         }
     }
 
+    public void notifyUri(int requestCode, int resultCode, Intent data){
+        if (mICloudCallback != null){
+            mICloudCallback.onActivityResult(requestCode, resultCode, data);
+        }
+    }
+
     public void notifyShow(){
         if (mICloudCallback != null){
             mICloudCallback.onShowCloudActivity();
@@ -48,5 +56,6 @@ public class CloudCallbackUtils {
         void onUpdateNav(int height, boolean isBack);
         void onShowCloudActivity();
         void onActivityResult(int requestCode, int resultCode, String path);
+        void onActivityResult(int requestCode, int resultCode, Intent data);
     }
 }

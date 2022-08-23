@@ -1,6 +1,11 @@
 package com.easemob.veckit.bean;
 
+import android.content.Context;
 import android.os.Parcel;
+
+import com.easemob.veckit.R;
+import com.easemob.veckit.utils.Utils;
+import com.hyphenate.helpdesk.model.Content;
 
 public class StyleSettingBean{
     // 初始页提示语
@@ -20,12 +25,12 @@ public class StyleSettingBean{
 
     }
 
-    public static StyleSettingBean create(){
+    public static StyleSettingBean create(Context content){
         return new StyleSettingBean(
-                "您好，有什么需要帮助，可以发起视频通话进行咨询呦！", "",
-                "你好，您正在向环信发起视频通话进行咨询！", "",
-                "您好！您前面还有4人等待，客服人员正在马不停蹄的赶过来，请您耐心等待！！", "",
-                "感谢您的来电，祝您生活愉快！", "");
+                Utils.getString(content, R.string.vec_initPrompt), "",
+                Utils.getString(content, R.string.vec_callingPrompt), "",
+                Utils.getString(content, R.string.queuingPrompt), "",
+                Utils.getString(content, R.string.vec_endingPrompt), "");
     }
 
     public StyleSettingBean(String initPrompt, String initBackgroundPic,

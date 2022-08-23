@@ -1,13 +1,16 @@
 package com.easemob.veckit.bean;
 
 
+import android.content.Context;
+
+
 public class VideoStyleBean{
     private ChannelBean channel;
     private FunctionSettingBean functionSettings;
     private StyleSettingBean styleSettings;
 
-    public static VideoStyleBean create(){
-        return new VideoStyleBean(FunctionSettingBean.create(), StyleSettingBean.create());
+    public static VideoStyleBean create(Context content){
+        return new VideoStyleBean(FunctionSettingBean.create(), StyleSettingBean.create(content));
     }
 
     public VideoStyleBean(){

@@ -29,9 +29,5 @@ public class LauncherActivity extends Activity {
 			}
 		}, AUTO_DELAY_MILLIS);
 
-		/*Intent intent = new Intent(this, CloudActivity.class);
-		startActivityForResult(intent, CloudActivity.UPLOAD_REQUEST);
-		finish();*/
-
 	}
 }

@@ -150,6 +150,8 @@ public class LoginActivity extends DemoBaseActivity {
 				if (!progressShow) {
 					return;
 				}
+				// 保存用户名
+				Preferences.getInstance().saveLoginUserName(uname);
 				toChatActivity();
 			}
 

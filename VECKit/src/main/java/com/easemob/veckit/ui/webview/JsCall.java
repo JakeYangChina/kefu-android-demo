@@ -12,7 +12,6 @@ public class JsCall {
 
     @JavascriptInterface
     public void postMessage(String args){
-        Log.e("rrrrrrrrr","args = "+args);
         if (mCallback != null){
             mCallback.onClick(args);
         }
