@@ -39,7 +39,6 @@ public class HMSPushHelper {
 	 * 4、服务端识别token过期后刷新token，以onNewToken接口返回。
 	 */
 	public void getHMSToken(Activity activity){
-		Log.e("uuuuuuuuuuuuu","getHMSToken = "+EMClient.getInstance().isFCMAvailable());
 		// 判断是否启用FCM推送
 		if (EMClient.getInstance().isFCMAvailable()) {
 			return;
@@ -58,22 +57,18 @@ public class HMSPushHelper {
 							try {
 								// read from agconnect-services.json
 								String appId = AGConnectServicesConfig.fromContext(activity).getString("client/app_id");
-								Log.e("uuuuuuuuuuuuu","appId = "+appId);
 								// 申请华为推送token
 								String token = HmsInstanceId.getInstance(activity).getToken(appId, "HCM");
-								Log.e("uuuuuuuuuuuuu","token = "+token);
 								EMLog.d("HWHMSPush", "get huawei hms push token:" + token);
 								if(token != null && !token.equals("")){
 									//没有失败回调，假定token失败时token为null
 									EMLog.d("HWHMSPush", "register huawei hms push token success token:" + token);
 									// 上传华为推送token
 									EMClient.getInstance().sendHMSPushTokenToServer(token);
-									Log.e("uuuuuuuuuuuuu","sendHMSPushTokenToServer = "+token);
 								}else{
 									EMLog.e("HWHMSPush", "register huawei hms push token fail!");
 								}
 							} catch (ApiException e) {
-								Log.e("uuuuuuuuuuuuu","ApiException = "+e.toString());
 								EMLog.e("HWHMSPush","get huawei hms push token failed, " + e);
 							}
 						}

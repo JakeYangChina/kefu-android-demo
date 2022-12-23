@@ -33,6 +33,8 @@ import com.hyphenate.helpdesk.Error;
 import com.hyphenate.helpdesk.callback.Callback;
 import com.hyphenate.helpdesk.easeui.util.IntentBuilder;
 import com.hyphenate.helpdesk.easeui.widget.ToastHelper;
+import com.hyphenate.push.EMPushConfig;
+import com.hyphenate.push.EMPushHelper;
 
 
 public class LoginActivity extends DemoBaseActivity {
@@ -186,6 +188,7 @@ public class LoginActivity extends DemoBaseActivity {
 
 				// 获取华为 HMS 推送 token
 				HMSPushHelper.getInstance().getHMSToken(LoginActivity.this);
+
 
 				//此处演示设置技能组,如果后台设置的技能组名称为[shouqian|shouhou],这样指定即分配到技能组中.
 				//为null则不按照技能组分配,同理可以设置直接指定客服scheduleAgent

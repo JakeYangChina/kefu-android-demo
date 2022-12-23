@@ -36,6 +36,8 @@ import com.hyphenate.chat.ChatClient;
 import com.hyphenate.chat.ChatManager;
 import com.hyphenate.chat.Conversation;
 import com.hyphenate.chat.EMImageMessageBody;
+import com.hyphenate.chat.EMMessageBody;
+import com.hyphenate.chat.EMTextMessageBody;
 import com.hyphenate.chat.Message;
 import com.hyphenate.helpdesk.emojicon.Emojicon;
 
@@ -733,12 +735,19 @@ public class VecChatViewUtils implements View.OnLayoutChangeListener, View.OnCli
 
             @Override
             public boolean onBubbleClick(Message message) {
-                EMImageMessageBody imgBody = (EMImageMessageBody) message.body();
-                Uri imgUri = imgBody.getLocalUri();
-                if (imgUri != null){
-                    Log.e("uuuuuuuuuuu","imgUri = "+imgUri);
-                    startBlankActivity(BlankActivity.BIG_IMAGE_REQUEST, imgUri, message.messageId(), imgBody.getFileName());
-                    return true;
+                EMMessageBody body = message.body();
+                if (body instanceof EMImageMessageBody){
+                    EMImageMessageBody imgBody = (EMImageMessageBody) message.body();
+                    Uri imgUri = imgBody.getLocalUri();
+                    if (imgUri != null){
+                        Log.e("uuuuuuuuuuu","imgUri = "+imgUri);
+                        startBlankActivity(BlankActivity.BIG_IMAGE_REQUEST, imgUri, message.messageId(), imgBody.getFileName());
+                        return true;
+                    }
+                }else if (body instanceof EMTextMessageBody){
+                    // TODO 点击文本消息
+                    Log.e("uuuuuuuuuuu","body = "+((EMTextMessageBody) body).getMessage());
+                    Log.e("uuuuuuuuuuu","getType = "+message.getType());
                 }
 
                 return false;

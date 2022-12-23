@@ -13,7 +13,6 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.easemob.helpdeskdemo.R;
-import com.easemob.helpdeskdemo.service.VideoCallWindowService;
 import com.easemob.helpdeskdemo.utils.Calling;
 import com.easemob.helpdeskdemo.widget.chatrow.ChatRowEvaluation;
 import com.easemob.helpdeskdemo.widget.chatrow.ChatRowForm;
@@ -29,7 +28,7 @@ import com.hyphenate.chat.EMTextMessageBody;
 import com.hyphenate.chat.EMVoiceMessageBody;
 import com.hyphenate.chat.Message;
 import com.hyphenate.chat.VecConfig;
-import com.hyphenate.helpdesk.callback.Callback;
+import com.hyphenate.helpdesk.callback.ValueCallBack;
 import com.hyphenate.helpdesk.easeui.provider.CustomChatRowProvider;
 import com.hyphenate.helpdesk.easeui.recorder.MediaManager;
 import com.hyphenate.helpdesk.easeui.ui.ChatFragment;
@@ -41,6 +40,8 @@ import com.hyphenate.helpdesk.easeui.widget.chatrow.ChatRow;
 import com.hyphenate.helpdesk.model.MessageHelper;
 import com.hyphenate.helpdesk.util.Log;
 import com.hyphenate.util.EMLog;
+
+
 
 public class CustomChatFragment extends ChatFragment implements ChatFragment.EaseChatFragmentListener {
 
@@ -110,9 +111,8 @@ public class CustomChatFragment extends ChatFragment implements ChatFragment.Eas
         });
 //        ((Button)inputMenu.getButtonSend()).setBackgroundResource(R.color.top_bar_normal_bg);
 
-
-
         //Message.testCmd(AgoraMessage.newAgoraMessage().getCurrentChatUsername());
+
     }
 
 
@@ -226,7 +226,22 @@ public class CustomChatFragment extends ChatFragment implements ChatFragment.Eas
                 startVideoCall();
                 break;
             case ITEM_EVALUATION:
-                ChatClient.getInstance().chatManager().asyncSendInviteEvaluationMessage(toChatUsername, null);
+
+
+                ChatManager.getInstance().getCurrentSessionId(toChatUsername, new ValueCallBack<String>() {
+                    @Override
+                    public void onSuccess(String value) {
+                        ChatClient.getInstance().chatManager().asyncSendInviteEvaluationMessage(toChatUsername, value, null);
+                    }
+
+                    @Override
+                    public void onError(int error, String errorMsg) {
+                        Log.e("oooooooooooooo", "errorMsg = "+errorMsg);
+                        ChatClient.getInstance().chatManager().asyncSendInviteEvaluationMessage(toChatUsername, "", null);
+                    }
+                });
+               /* String serviceSessionId = "";
+                ChatClient.getInstance().chatManager().asyncSendInviteEvaluationMessage(toChatUsername, serviceSessionId, null);*/
                 break;
 //            case ITEM_FILE:
 //                //如果需要覆盖内部的,可以return true

@@ -200,4 +200,5 @@
     <string name="robot_comment_tags">机器人评价标签</string>
     <string name="unsolved_reason">未解决原因</string>
     <string name="share_screen_ongoing">共享屏幕运行中...</string>
+    <string name="ping_jia_title">请问客服是否解决了您的问题？</string>
 </resources>

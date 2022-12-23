@@ -30,6 +30,8 @@ public class CallInterfaceActivity extends Activity {
 
     private TextView mWelcomeWordsTv;
     private TextView mMenuTv;
+    private TextView mGetWelcomeMenuTv;
+    private TextView mGetTwoWelcomeMenuTv;
     private String mName;
 
     @Override
@@ -39,7 +41,7 @@ public class CallInterfaceActivity extends Activity {
         findViewById(R.id.chatBt).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (TextUtils.isEmpty(mName)){
+                if (TextUtils.isEmpty(mName)) {
                     Toast.makeText(CallInterfaceActivity.this, "请先登录！", Toast.LENGTH_LONG).show();
                     return;
                 }
@@ -64,12 +66,12 @@ public class CallInterfaceActivity extends Activity {
             @Override
             public void onClick(View v) {
                 String s = et.getText().toString();
-                if (TextUtils.isEmpty(s)){
+                if (TextUtils.isEmpty(s)) {
                     Toast.makeText(CallInterfaceActivity.this, "不能为空！", Toast.LENGTH_LONG).show();
                     return;
                 }
 
-                if (TextUtils.isEmpty(mName)){
+                if (TextUtils.isEmpty(mName)) {
                     Toast.makeText(CallInterfaceActivity.this, "请先登录！", Toast.LENGTH_LONG).show();
                     return;
                 }
@@ -104,7 +106,7 @@ public class CallInterfaceActivity extends Activity {
         findViewById(R.id.welcomeWordsBt).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (TextUtils.isEmpty(mName)){
+                if (TextUtils.isEmpty(mName)) {
                     Toast.makeText(CallInterfaceActivity.this, "请先登录！", Toast.LENGTH_LONG).show();
                     return;
                 }
@@ -112,7 +114,7 @@ public class CallInterfaceActivity extends Activity {
                 ChatManager.getInstance().getEnterpriseWelcome(mName, new ValueCallBack<String>() {
                     @Override
                     public void onSuccess(String value) {
-                        if (isFinishing()){
+                        if (isFinishing()) {
                             return;
                         }
                         runOnUiThread(new Runnable() {
@@ -129,7 +131,7 @@ public class CallInterfaceActivity extends Activity {
                             @SuppressLint("SetTextI18n")
                             @Override
                             public void run() {
-                                mWelcomeWordsTv.setText("errorCode = "+error+", errorMsg = "+errorMsg);
+                                mWelcomeWordsTv.setText("errorCode = " + error + ", errorMsg = " + errorMsg);
                             }
                         });
                     }
@@ -141,7 +143,7 @@ public class CallInterfaceActivity extends Activity {
         findViewById(R.id.menuBt).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (TextUtils.isEmpty(mName)){
+                if (TextUtils.isEmpty(mName)) {
                     Toast.makeText(CallInterfaceActivity.this, "请先登录！", Toast.LENGTH_LONG).show();
                     return;
                 }
@@ -149,7 +151,7 @@ public class CallInterfaceActivity extends Activity {
                 AgoraMessage.getSkillGroupMenuWithVisitorUserName(ChatClient.getInstance().tenantId(), mName, new ValueCallBack<String>() {
                     @Override
                     public void onSuccess(String value) {
-                        if (isFinishing()){
+                        if (isFinishing()) {
                             return;
                         }
                         runOnUiThread(new Runnable() {
@@ -166,7 +168,7 @@ public class CallInterfaceActivity extends Activity {
                             @SuppressLint("SetTextI18n")
                             @Override
                             public void run() {
-                                mMenuTv.setText("errorCode = "+error+", errorMsg = "+errorMsg);
+                                mMenuTv.setText("errorCode = " + error + ", errorMsg = " + errorMsg);
                             }
                         });
                     }
@@ -174,17 +176,73 @@ public class CallInterfaceActivity extends Activity {
             }
         });
 
+
+        // 访客端获取欢迎语菜单
+        mGetWelcomeMenuTv = findViewById(R.id.getWelcomeMenuTv);
+        findViewById(R.id.getWelcomeMenuBt).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (TextUtils.isEmpty(mName)) {
+                    Toast.makeText(CallInterfaceActivity.this, "请先登录！", Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                String target = Preferences.getInstance().getCustomerAccount();
+                Log.e("ppppppppppppp", "getCustomerAccount = " + target);
+
+                /*ChatClient.getInstance().chatManager().getAppRelevanceSkillGroupMenuWithVisitorUserName(target, mName, new ValueCallBack<String>() {
+                    @Override
+                    public void onSuccess(String value) {
+                        Log.e("ppppppppppppp", "value = " + value);
+                        mGetWelcomeMenuTv.setText(value);
+                    }
+
+                    @Override
+                    public void onError(int error, String errorMsg) {
+                        mGetWelcomeMenuTv.setText("errorCode = " + error + ", errorMsg = " + errorMsg);
+                    }
+                });*/
+
+            }
+        });
+
+        // 访客端获取企业欢迎语
+        mGetTwoWelcomeMenuTv = findViewById(R.id.getTwoWelcomeMenuTv);
+        findViewById(R.id.getTwoWelcomeBt).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (TextUtils.isEmpty(mName)) {
+                    Toast.makeText(CallInterfaceActivity.this, "请先登录！", Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                String target = Preferences.getInstance().getCustomerAccount();
+                /*ChatClient.getInstance().chatManager().getAppRelevanceEnterpriseWelcomeWithVisitorUserName(target, mName, new ValueCallBack<String>() {
+                    @Override
+                    public void onSuccess(String value) {
+                        Log.e("pppppppppppp", "value = " + value);
+                        mGetTwoWelcomeMenuTv.setText(value);
+                    }
+
+                    @Override
+                    public void onError(int error, String errorMsg) {
+                        mGetTwoWelcomeMenuTv.setText("errorCode = " + error + ", errorMsg = " + errorMsg);
+                    }
+                });*/
+
+            }
+        });
     }
 
-    private String getRandomAccount(){
+    private String getRandomAccount() {
         String val = "";
         Random random = new Random();
-        for(int i = 0; i < 15; i++){
+        for (int i = 0; i < 15; i++) {
             String charOrNum = random.nextInt(2) % 2 == 0 ? "char" : "num"; //输出字母还是数字
-            if("char".equalsIgnoreCase(charOrNum)){// 字符串
+            if ("char".equalsIgnoreCase(charOrNum)) {// 字符串
                 int choice = random.nextInt(2) % 2 == 0 ? 65 : 97; //取得大写字母还是小写字母
                 val += (char) (choice + random.nextInt(26));
-            }else if("num".equalsIgnoreCase(charOrNum)){// 数字
+            } else if ("num".equalsIgnoreCase(charOrNum)) {// 数字
                 val += String.valueOf(random.nextInt(10));
             }
         }
@@ -194,7 +252,7 @@ public class CallInterfaceActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == 1){
+        if (resultCode == 1) {
             Toast.makeText(this, "登录成功", Toast.LENGTH_SHORT).show();
             mName = data.getStringExtra("name");
         }

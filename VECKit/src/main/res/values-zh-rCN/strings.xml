@@ -101,4 +101,5 @@
     <string name="Download_the_pictures">下载图片: 0%</string>
     <string name="Download_the_pictures_new">下载图片:</string>
     <string name="current_came_disable">当前摄像头为关闭状态</string>
+    <string name="timeout_text">排队超时、通话结束</string>
 </resources>

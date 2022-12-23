@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
               android:background="@color/normal_bg_color"
@@ -76,6 +77,8 @@
                 android:layout_height="wrap_content">
                 <TextView
                     android:id="@+id/pingJiaTv"
+                    android:text="@string/ping_jia_title"
+                    android:gravity="center"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"/>
 
@@ -158,7 +161,7 @@
                     android:textColor="#BABABB"
                     android:textSize="12sp" />
 
-                <View
+                <!--<View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_centerVertical="true"
@@ -170,7 +173,7 @@
                     android:layout_height="1dp"
                     android:layout_centerVertical="true"
                     android:layout_toRightOf="@id/tv_description"
-                    android:background="#E8E8E9" />
+                    android:background="#E8E8E9" />-->
             </RelativeLayout>
 
             <RelativeLayout
@@ -179,7 +182,22 @@
                 android:layout_marginBottom="10dip"
                 android:layout_marginTop="30dip" >
 
-                <RatingBar
+                <com.easemob.helpdeskdemo.widget.RatingBar
+                    android:id="@+id/ratingBar1"
+                    android:paddingTop="15dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="50dp"
+                    app:starCount="5"
+                    android:layout_centerHorizontal="true"
+                    app:starEmpty="@drawable/hd_icon_star_normal"
+                    app:starFill="@drawable/hd_icon_star_select"
+                    app:starHalf="@drawable/hd_icon_star_select"
+                    app:starImageSize="35dp"
+                    app:starPadding="10dp"
+                    app:starStep="0"
+                    app:stepSize="Full"/>
+
+                <!--<RatingBar
                     android:id="@+id/ratingBar1"
                     style="@style/myRatingBar"
                     android:layout_width="wrap_content"
@@ -188,7 +206,7 @@
                     android:layout_marginLeft="20dip"
                     android:numStars="5"
                     android:rating="5"
-                    android:stepSize="1.0" />
+                    android:stepSize="1.0" />-->
             </RelativeLayout>
 
             <TextView

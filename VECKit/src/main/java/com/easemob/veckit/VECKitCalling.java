@@ -175,7 +175,6 @@ public class VECKitCalling extends Activity {
     // 坐席发起邀请，未接通，访客挂断
     public static void endCallFromZuoXi(String content){
         String toUserName = AgoraMessage.newAgoraMessage().getCurrentChatUsername();
-
         Message message = Message.createSendMessage(Message.Type.TXT);
         message.setBody(new EMTextMessageBody(content));
         message.setTo(toUserName);
@@ -194,31 +193,6 @@ public class VECKitCalling extends Activity {
         ChatManager.getInstance().sendMessage(message);
         VecConfig.newVecConfig().setIsOnLine(false);
     }
-
-
-    /*private void test(String toUserName){
-        Message message = Message.createSendMessage(Message.Type.CMD);
-        message.setBody(new EMCmdMessageBody(""));
-        message.setTo(toUserName);
-
-        // 例如：拼接数据到，把 weichat 字段拼接到ext里
-        *//*"ext": {
-            "weichat": {
-                "routingRuleFlag":"业务标识1"
-            }
-        }*//*
-
-        try {
-            JSONObject weichat = new JSONObject();
-            weichat.put("routingRuleFlag","业务标识1");
-
-            message.setAttribute("weichat",weichat);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        ChatManager.getInstance().sendMessage(message);
-    }*/
 
     // 接通挂断
     public static void endCallFromOn(ValueCallBack<String> callBack){

@@ -845,7 +845,7 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
 
         if (mVecChatViewUtils != null) {
             if (mVecChatViewUtils.isNewStyle()) {
-                // mVecChatViewUtils.initIcon(mBottomContainerView);
+                //mVecChatViewUtils.initIcon(mBottomContainerView);
                 mIconDatas.addAll(mVecChatViewUtils.getIcons());
                 addBottomContainerViewPressStateListener();
             } else {
@@ -2977,13 +2977,22 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
     private boolean mIsOnFlashLight;
     // 闪光灯
     private boolean mIsOnTorch;
+
+    private String mPreType = "";
+    private String mPreCardOcrAction;
     @Override
     public void pushMessage(String msgtype, String type) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 try {
+                    Log.e("uuuuuuuuuuuuuu","msgtype = "+msgtype);
+                    Log.e("uuuuuuuuuuuuuu","type = "+type);
                     if (AgoraMessage.TYPE_LINK_MESSAGE_PUSH.equalsIgnoreCase(type)) {
+                        if (!isRun(type, "")){
+                            return;
+                        }
+                        closePrePage(type);
                         if (mLink != null) {
                             mLink.clear();
                             mLink = null;
@@ -2996,6 +3005,10 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
                         if (!msg.isNull("cardocr")) {
                             JSONObject infopush = msg.getJSONObject("cardocr");
                             String action = infopush.getString("action");
+                            if (!isRun(type, action)){
+                                return;
+                            }
+                            closePrePage(type);
                             if ("cardocr_face_start".equalsIgnoreCase(action)) {
                                 // 识别身份证人像面
                                 sdcardStart();
@@ -3015,6 +3028,7 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
                                 // 识别银行卡 结束
                                 sdcardEnd();
                             }
+                            mPreCardOcrAction = action;
                         }
 
                     } else if (AgoraMessage.TYPE_ELECSIGN.equalsIgnoreCase(type)) {
@@ -3024,12 +3038,17 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
                             JSONObject elecsign = msg.getJSONObject("elecsign");
                             String action = elecsign.getString("action");
                             String flowId = elecsign.getString("flowId");
+                            if (!isRun(type, action)){
+                                return;
+                            }
+                            closePrePage(type);
                             if ("elecsign_start".equalsIgnoreCase(action)) {
                                 // 开始
                                 signature(flowId);
                             } else if ("elecsign_end".equalsIgnoreCase(action)) {
                                 signatureEnd();
                             }
+                            mPreCardOcrAction = action;
                         }
                     } else if (AgoraMessage.TYPE_IDENTITYAUTH.equalsIgnoreCase(type)) {
                         // 身份认证，人脸
@@ -3038,11 +3057,16 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
                             JSONObject elecsign = msg.getJSONObject("identityauth");
                             // "action":"identityauth_start"
                             String action = elecsign.getString("action");
+                            if (!isRun(type, action)){
+                                return;
+                            }
+                            closePrePage(type);
                             if ("identityauth_start".equalsIgnoreCase(action)) {
                                 face();
                             } else if ("identityauth_end".equalsIgnoreCase(action)) {
                                 faceEnd();
                             }
+                            mPreCardOcrAction = action;
                         }
                     } else if (AgoraMessage.TYPE_MICROPHONE.equalsIgnoreCase(type)) {
                         // 开关麦克风
@@ -3173,8 +3197,6 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
                         }
 
                         boolean on = Utils.isOn(msgtype, type);
-                        Log.e("yyyyyyyyyyy","msgtype = "+msgtype);
-                        Log.e("yyyyyyyyyyy","on = "+on);
 
                         if (on) {
                             if (mCurrentCameraIsBack) {
@@ -3224,6 +3246,7 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
                         }
 
                     }
+                    mPreType = type;
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -3231,6 +3254,102 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
 
             }
         });
+    }
+
+    private boolean isRun(String type, String action){
+        if (TextUtils.isEmpty(mPreType)){
+            return true;
+        }
+
+        if (!type.equals(mPreType)){
+            if ("cardocr_face_end".equals(action) || "cardocr_back_end".equals(action)
+                    || "cardocr_bank_end".equals(action) || "elecsign_end".equals(action)
+                    || "identityauth_end".equals(action)){
+                Log.e("uuuuuuuuuuuuuu", "mPreType = "+mPreType);
+                Log.e("uuuuuuuuuuuuuu", "action = "+action);
+                Log.e("uuuuuuuuuuuuuu", "type = "+type);
+                return false;
+            }else {
+                return true;
+            }
+        }
+        return true;
+    }
+
+    private void closePrePage(String type){
+        if (TextUtils.isEmpty(mPreType)){
+            return;
+        }
+
+        if (mPreType.equals(type)){
+            return;
+        }
+
+        if (AgoraMessage.TYPE_LINK_MESSAGE_PUSH.equalsIgnoreCase(mPreType)){
+            // 信息推送
+            if (isShowPushView()){
+                // 关闭
+                if (mLink != null){
+                    mLink.clear();
+                }
+            }
+        }else {
+            if (TextUtils.isEmpty(mPreCardOcrAction)){
+                return;
+            }
+            // 排除 action 上次记录为end
+            if (AgoraMessage.TYPE_CARD_OCR.equalsIgnoreCase(mPreType)){
+                if ("cardocr_face_start".equals(mPreCardOcrAction)/*
+                        || "cardocr_face_end".equals(mPreCardOcrAction)*/){
+                    // 识别身份证人像面
+                    if (isShowPushView()){
+                        // 关闭
+                        sdcardEnd();
+                    }
+                }else if ("cardocr_back_start".equals(mPreCardOcrAction)/*
+                        || "cardocr_back_end".equals(mPreCardOcrAction)*/){
+                    // 识别身份证国徽面
+                    if (isShowPushView()){
+                        // 关闭
+                        sdcardEnd();
+                    }
+                }else if ("cardocr_bank_start".equals(mPreCardOcrAction)/*
+                        || "cardocr_bank_end".equals(mPreCardOcrAction)*/){
+                    // 识别银行卡
+                    if (isShowPushView()){
+                        // 关闭
+                        sdcardEnd();
+                    }
+                }
+            }else if (AgoraMessage.TYPE_ELECSIGN.equalsIgnoreCase(mPreType)){
+                if ("elecsign_start".equals(mPreCardOcrAction)/*
+                        || "elecsign_end".equals(mPreCardOcrAction)*/){
+                    // 电子签名
+                    if (isShowPushView()){
+                        // 关闭
+                        signatureEnd();
+                    }
+                }
+            }else if (AgoraMessage.TYPE_IDENTITYAUTH.equalsIgnoreCase(mPreType)){
+                if ("identityauth_start".equals(mPreCardOcrAction)/*
+                        || "identityauth_end".equals(mPreCardOcrAction)*/){
+                    // 身份认证，人脸
+                    if (isShowPushView()){
+                        // 关闭
+                        faceEnd();
+                    }
+                }
+            }
+
+        }
+    }
+
+    public boolean isShowPushView(){
+        if (mPushView == null){
+            return false;
+        }
+
+        return mPushView.getVisibility() == View.VISIBLE;
     }
 
     // 关闭闪光灯和手电筒

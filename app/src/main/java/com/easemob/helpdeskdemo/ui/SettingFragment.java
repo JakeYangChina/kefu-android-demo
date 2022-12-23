@@ -418,6 +418,9 @@ public class SettingFragment extends Fragment implements View.OnClickListener{
 			String tenantId = paramMap.get("tenantid");
 			String projectId = paramMap.get("projectid");
 			String configId = paramMap.get("configid");
+			Log.e("uuuuuuuu","appkey = "+appkey);
+			Log.e("uuuuuuuu","imServiceNum = "+imServiceNum);
+			Log.e("uuuuuuuu","tenantId = "+tenantId);
 			Log.e("uuuuuuuu","configId = "+configId);
 			if (!TextUtils.isEmpty(appkey)) {
 				tvAppkey.setText(appkey);

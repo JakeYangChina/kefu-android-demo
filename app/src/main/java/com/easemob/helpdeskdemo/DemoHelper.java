@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.text.TextUtils;
-import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -19,6 +18,7 @@ import com.heytap.msp.push.HeytapPushManager;
 import com.hyphenate.chat.ChatClient;
 import com.hyphenate.chat.ChatManager;
 import com.hyphenate.chat.Conversation;
+import com.hyphenate.chat.EMClient;
 import com.hyphenate.chat.EMCmdMessageBody;
 import com.hyphenate.chat.Message;
 import com.hyphenate.chat.OfficialAccount;
@@ -29,6 +29,7 @@ import com.hyphenate.helpdesk.easeui.util.CommonUtils;
 import com.hyphenate.helpdesk.easeui.util.IntentBuilder;
 import com.hyphenate.helpdesk.model.AgentInfo;
 import com.hyphenate.helpdesk.model.MessageHelper;
+import com.hyphenate.helpdesk.util.Log;
 import com.hyphenate.push.EMPushConfig;
 import com.hyphenate.push.EMPushHelper;
 import com.hyphenate.push.EMPushType;
@@ -36,7 +37,6 @@ import com.hyphenate.push.EMPushType;
 import org.json.JSONObject;
 
 import java.util.List;
-
 
 public class DemoHelper {
 
@@ -48,6 +48,11 @@ public class DemoHelper {
      * kefuChat.MessageListener
      */
     protected ChatManager.MessageListener messageListener = null;
+
+
+
+
+
 
     /**
      * ChatClient.ConnectionListener
@@ -73,6 +78,8 @@ public class DemoHelper {
      */
     public void init(final Context context) {
         appContext = context;
+
+        // 客服Options
         ChatClient.Options options = new ChatClient.Options();
         options.setAppkey(Preferences.getInstance().getAppKey());
         options.setTenantId(Preferences.getInstance().getTenantId());
@@ -88,6 +95,8 @@ public class DemoHelper {
                 .enableHWPush() // 需要在AndroidManifest.xml中配置appId
                 .enableFCM("570662061026");
 
+
+
         options.setPushConfig(builder.build());
         // TODO 沙箱测试，只为测试
         // options.setKefuRestServer("https://helps.live");
@@ -98,7 +107,7 @@ public class DemoHelper {
 //	    options.setUse2channel(true);
 //        options.setAutoLogin(false);
 
-        options.setAppVersion("1.3.2.8");
+        options.setAppVersion("1.3.3.0");
         // 环信客服 SDK 初始化, 初始化成功后再调用环信下面的内容
         if (ChatClient.getInstance().init(context, options)){
             _uiProvider = UIProvider.getInstance();
@@ -110,8 +119,20 @@ public class DemoHelper {
             setGlobalListeners();
         }
 
-    }
 
+        // IM EMOptions
+        /*com.hyphenate.chat.EMOptions emoptions = new com.hyphenate.chat.EMOptions();
+        if (ChatClient.getInstance().init(context, options, emoptions)){
+            _uiProvider = UIProvider.getInstance();
+            //初始化EaseUI
+            _uiProvider.init(context);
+            //调用easeui的api设置providers
+            setEaseUIProvider(context);
+            //设置全局监听
+            setGlobalListeners();
+        }*/
+
+    }
 
 
     private void setEaseUIProvider(final Context context){

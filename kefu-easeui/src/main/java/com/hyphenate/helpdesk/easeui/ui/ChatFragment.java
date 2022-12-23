@@ -32,11 +32,13 @@ import androidx.core.content.FileProvider;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
 import com.hyphenate.chat.ChatManager;
 import com.hyphenate.chat.Conversation;
 import com.hyphenate.chat.Message;
 import com.hyphenate.helpdesk.R;
+import com.hyphenate.helpdesk.callback.ValueCallBack;
 import com.hyphenate.helpdesk.easeui.UIProvider;
 import com.hyphenate.helpdesk.easeui.provider.CustomChatRowProvider;
 import com.hyphenate.helpdesk.easeui.recorder.MediaManager;
@@ -283,6 +285,27 @@ public class ChatFragment extends BaseFragment implements ChatManager.MessageLis
         }
     };
 
+    private void readMessage(Message message) {
+        String sessionId = AgoraMessage.getSessionIdFromMessage(message);
+        if (TextUtils.isEmpty(sessionId)) {
+            return;
+        }
+
+        String tenantId = ChatClient.getInstance().tenantId();
+        ChatClient.getInstance().chatManager().asyncMarkAllMessagesAsRead(tenantId, sessionId, new ValueCallBack<String>() {
+            @Override
+            public void onSuccess(String value) {
+                EMLog.e("asyncMarkAllMessagesAsRead","value = "+value);
+            }
+
+            @Override
+            public void onError(int error, String errorMsg) {
+                EMLog.e("asyncMarkAllMessagesAsRead","errorMsg = "+errorMsg);
+            }
+        });
+
+    }
+
     /**
      * 设置属性，监听等
      */
@@ -298,6 +321,7 @@ public class ChatFragment extends BaseFragment implements ChatManager.MessageLis
 
         onConversationInit();
         onMessageListInit();
+
 
         // 设置标题栏点击事件
         titleBar.setLeftLayoutClickListener(new OnClickListener() {
@@ -376,6 +400,16 @@ public class ChatFragment extends BaseFragment implements ChatManager.MessageLis
             // 把此会话的未读数置为0
             conversation.markAllMessagesAsRead();
             final List<Message> msgs = conversation.getAllMessages();
+            if (msgs != null && msgs.size() > 0) {
+                for (Message message : msgs) {
+                    Message.Direct direct = message.direct();
+                    if (direct == Message.Direct.RECEIVE) {
+                        readMessage(message);
+                        break;
+                    }
+                }
+            }
+
             int msgCount = msgs != null ? msgs.size() : 0;
             if (msgCount < conversation.getAllMsgCount() && msgCount < pagesize) {
                 String msgId = null;
@@ -822,6 +856,8 @@ public class ChatFragment extends BaseFragment implements ChatManager.MessageLis
                 messageList.refreshSelectLast();
                 // 声音和震动提示有新消息
                 UIProvider.getInstance().getNotifier().viberateAndPlayTone(message);
+                // TODO 测试，通知座席端 消息已读
+                readMessage(message);
             } else {
                 // 如果消息不是和当前聊天ID的消息
                 UIProvider.getInstance().getNotifier().onNewMsg(message);

@@ -89,4 +89,5 @@ dependencies {
     embed 'com.google.code.gson:gson:2.8.2'
     embed 'org.reactivestreams:reactive-streams:1.0.2'
     embed (name:'ijkplayer-java-mate',ext:'aar')  //本地aar*/
+
 }

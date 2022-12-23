@@ -126,7 +126,6 @@ public class ShopDetailsActivity extends DemoBaseActivity {
 						checkLogin();
 					}
 				});
-
 			}
 		});
 	}

@@ -10,6 +10,8 @@ import com.hyphenate.helpdesk.model.OrderInfo;
 import com.hyphenate.helpdesk.model.QueueIdentityInfo;
 import com.hyphenate.helpdesk.model.VisitorInfo;
 import com.hyphenate.helpdesk.model.VisitorTrack;
+import com.hyphenate.push.EMPushHelper;
+import com.hyphenate.push.EMPushType;
 
 import org.json.JSONObject;
 
@@ -27,15 +29,14 @@ public class DemoMessageHelper {
 	public static VisitorInfo createVisitorInfo() {
 		VisitorInfo info = ContentFactory.createVisitorInfo(null);
 		info.nickName(Preferences.getInstance().getNickName())
-		    // .name(Preferences.getInstance().getUserName())
-		    .name(Preferences.getInstance().getLoginUserName())
+		    .name(Preferences.getInstance().getUserName())
 		    .qq("10000")
 			.phone("15811200000")
 		    .companyName("easemob")
-		    .description("")
+		    .description("舒服舒服算法")
 		    .email("abc@123.com");
-		JSONObject content = info.getContent();
 
+		JSONObject content = info.getContent();
 		try {
 			JSONObject object = new JSONObject();
 			object.put("test","sdfdsfdsfsdfdsfdsfadda");
@@ -43,8 +44,6 @@ public class DemoMessageHelper {
 		}catch (Exception e){
 			e.printStackTrace();
 		}
-
-		Log.e("ooooooooooopppppppp","visitorInfo = "+info.getContent());
 
 		return info;
 	}
@@ -76,19 +75,18 @@ public class DemoMessageHelper {
 		JSONObject content = track.getContent();
 		try {
 			JSONObject object = new JSONObject();
-			object.put("test","sdfdsfdsfsdfdsfdsfadda");
-			content.put("userDefineColumn",object.toString());
+			// object.put("test","sdfdsfdsfsdfdsfdsfadda");
+			content.put("android","android端测试");
 		}catch (Exception e){
 			e.printStackTrace();
 		}
 
 
-		Log.e("pppppppppppp","ooooooooooopppppppp dd =  "+track.getContent());
-
 		return track;
 	}
 	
 	public static OrderInfo createOrderInfo(Context context, int index) {
+
 		OrderInfo info = ContentFactory.createOrderInfo(null);
 		switch(index) {
 		case 1:
@@ -110,19 +108,17 @@ public class DemoMessageHelper {
 			default:
 				break;
 		}
-
 		JSONObject content = info.getContent();
 		try {
 			JSONObject object = new JSONObject();
 			object.put("test","sdfdsfdsfsdfdsfdsfadda");
-			content.put("userDefineColumn",object.toString());
+			// content.put("userDefineColumn",object.toString());
+			content.put("android","android端测试");
 		}catch (Exception e){
 			e.printStackTrace();
-			Log.e("ooooooooooopppppppp","error = "+e.toString());
 		}
 
 
-		Log.e("pppppppppppp","ooooooooooopppppppp ss =  "+info.getContent());
 		return info;
 		
 	}

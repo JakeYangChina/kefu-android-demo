@@ -101,4 +101,5 @@
     <string name="Download_the_pictures">Download the pictures: 0%</string>
     <string name="Download_the_pictures_new">Download the pictures:</string>
     <string name="current_came_disable">The current camera is off</string>
+    <string name="timeout_text">排队超时、通话结束</string>
 </resources>

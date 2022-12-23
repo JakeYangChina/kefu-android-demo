@@ -270,5 +270,20 @@
         </FrameLayout>
     </com.easemob.veckit.ui.EvaluateView>
 
+    <!--排队超时、通话结束-->
+    <TextView
+        android:visibility="gone"
+        android:id="@+id/timeoutTv"
+        android:textColor="@color/white"
+        android:background="@color/red"
+        android:text="@string/timeout_text"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="10dp"
+        android:paddingTop="@dimen/dp_8"
+        android:paddingBottom="@dimen/dp_8"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
 
 </FrameLayout>

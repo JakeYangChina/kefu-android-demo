@@ -1,7 +1,5 @@
 package com.hyphenate.helpdesk.easeui.util;
 
-import android.net.Uri;
-
 public class CloudCallbackUtils {
     private static CloudCallbackUtils sCloudCallbackUtils;
     private ICloudCallback mICloudCallback;

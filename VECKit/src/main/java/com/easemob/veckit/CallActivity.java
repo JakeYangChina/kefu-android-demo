@@ -2595,7 +2595,381 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
     private boolean mIsOnFlashLight;
     // 闪光灯
     private boolean mIsOnTorch;
+    private String mPreType = "";
+    private String mPreCardOcrAction;
     @Override
+    public void pushMessage(String msgtype, String type) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Log.e("uuuuuuuuuuuuuu","msgtype = "+msgtype);
+                    Log.e("uuuuuuuuuuuuuu","type = "+type);
+                    if (AgoraMessage.TYPE_LINK_MESSAGE_PUSH.equalsIgnoreCase(type)) {
+                        if (!isRun(type, "")){
+                            return;
+                        }
+                        closePrePage(type);
+                        if (mLink != null) {
+                            mLink.clear();
+                            mLink = null;
+                        }
+                        mLink = new PushMessageLink();
+                        mLink.init(msgtype, mPushView, null, getApplication(), mHeight);
+                    } else if (AgoraMessage.TYPE_CARD_OCR.equalsIgnoreCase(type)) {
+                        // 卡证识别
+                        JSONObject msg = new JSONObject(msgtype);
+                        if (!msg.isNull("cardocr")) {
+                            JSONObject infopush = msg.getJSONObject("cardocr");
+                            String action = infopush.getString("action");
+                            if (!isRun(type, action)){
+                                return;
+                            }
+                            closePrePage(type);
+                            if ("cardocr_face_start".equalsIgnoreCase(action)) {
+                                // 识别身份证人像面
+                                sdcardStart();
+                            } else if ("cardocr_face_end".equalsIgnoreCase(action)) {
+                                // 识别身份证人像面 结束
+                                sdcardEnd();
+                            } else if ("cardocr_back_start".equalsIgnoreCase(action)) {
+                                // 识别身份证国徽面
+                                sdcardStart();
+                            } else if ("cardocr_back_end".equalsIgnoreCase(action)) {
+                                // 识别身份证国徽面 结束
+                                sdcardEnd();
+                            } else if ("cardocr_bank_start".equalsIgnoreCase(action)) {
+                                // 识别银行卡
+                                sdcardStart();
+                            } else if ("cardocr_bank_end".equalsIgnoreCase(action)) {
+                                // 识别银行卡 结束
+                                sdcardEnd();
+                            }
+                            mPreCardOcrAction = action;
+                        }
+
+                    } else if (AgoraMessage.TYPE_ELECSIGN.equalsIgnoreCase(type)) {
+                        // 电子签名
+                        JSONObject msg = new JSONObject(msgtype);
+                        if (!msg.isNull("elecsign")) {
+                            JSONObject elecsign = msg.getJSONObject("elecsign");
+                            String action = elecsign.getString("action");
+                            String flowId = elecsign.getString("flowId");
+                            if (!isRun(type, action)){
+                                return;
+                            }
+                            closePrePage(type);
+                            if ("elecsign_start".equalsIgnoreCase(action)) {
+                                // 开始
+                                signature(flowId);
+                            } else if ("elecsign_end".equalsIgnoreCase(action)) {
+                                signatureEnd();
+                            }
+                            mPreCardOcrAction = action;
+                        }
+                    } else if (AgoraMessage.TYPE_IDENTITYAUTH.equalsIgnoreCase(type)) {
+                        // 身份认证，人脸
+                        JSONObject msg = new JSONObject(msgtype);
+                        if (!msg.isNull("identityauth")) {
+                            JSONObject elecsign = msg.getJSONObject("identityauth");
+                            // "action":"identityauth_start"
+                            String action = elecsign.getString("action");
+                            if (!isRun(type, action)){
+                                return;
+                            }
+                            closePrePage(type);
+                            if ("identityauth_start".equalsIgnoreCase(action)) {
+                                face();
+                            } else if ("identityauth_end".equalsIgnoreCase(action)) {
+                                faceEnd();
+                            }
+                            mPreCardOcrAction = action;
+                        }
+                    } else if (AgoraMessage.TYPE_MICROPHONE.equalsIgnoreCase(type)) {
+                        // 开关麦克风
+                        boolean on = Utils.isOn(msgtype, type);
+                        int i = mAgoraRtcEngine.muteLocalAudioStream(!on);
+                        if (i == 0) {
+                            sendMicrophone("");
+                            mCurrentLocalVoiceIsOpen = Utils.isOn(msgtype, type);
+                            mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_VOICE), mCurrentLocalVoiceIsOpen);
+                            mLocalViewItem.updateName();
+                            updateVoiceIcon(mMyUid, mCurrentLocalVoiceIsOpen);
+                        } else {
+                            sendMicrophone("操作失败！");
+                        }
+
+                    } else if (AgoraMessage.TYPE_CAMERA.equalsIgnoreCase(type)) {
+                        // 开关摄像头
+                        boolean on = Utils.isOn(msgtype, type);
+                        int i1 = mAgoraRtcEngine.muteLocalVideoStream(!on);
+                        if (i1 == 0) {
+                            sendCamera("");
+                            closeFlashLightAndTorch();
+                            mCurrentLocalCameraIsOpen = on;
+                            mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME), mCurrentLocalCameraIsOpen);
+                            mLocalViewItem.updateCameraView();
+                            updateCamera(mMyUid, mCurrentLocalCameraIsOpen);
+
+                            if (on) {
+                                mCameraTextView.setText(Utils.getString(getApplicationContext(), R.string.vec_close_camera));
+                                mCameraIcon.setText(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getPressIcon());
+                                mCameraIcon.setTextColor(Color.parseColor(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getPressIconColor()));
+                            } else {
+                                mCameraTextView.setText(Utils.getString(getApplicationContext(), R.string.vec_open_camera));
+                                mCameraIcon.setText(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getDefaultIcon());
+                                mCameraIcon.setTextColor(Color.parseColor(mIconDatas.get(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_CAME)).getDefaultIconColor()));
+                            }
+                        } else {
+                            String msg = Utils.getString(getApplicationContext(), R.string.vec_operation_fail);
+                            sendCamera(msg);
+                        }
+
+                    } else if (AgoraMessage.TYPE_FOCUS_CAMERA.equalsIgnoreCase(type)) {
+                        Log.e("ooooooooooo", "开关聚焦");
+                        // 聚焦
+                        if (mAgoraRtcEngine.isCameraFocusSupported()) {
+                            if (!mCurrentCameraIsBack) {
+                                String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
+                                showToast(msg);
+                                sendCameraFocus(msg);
+                                return;
+                            }
+
+                            if (mCurrentLocalCameraIsOpen){
+                                showAndHidden(mFocusTv, true);
+                                new Handler().postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        showAndHidden(mFocusTv, false);
+                                    }
+                                }, 2000);
+                                sendCameraFocus("");
+                                mAgoraRtcEngine.setCameraFocusPositionInPreview(mX, mY);
+                            }else {
+                                String msg = Utils.getString(getApplicationContext(), R.string.current_came_disable);
+                                sendCameraFocus(msg);
+                                showToast(msg);
+                            }
+
+                        } else {
+                            String msg = Utils.getString(getApplicationContext(), R.string.vec_no_support_feature);
+                            sendCameraFocus(msg);
+                            showToast(msg);
+                        }
+
+                    } else if (AgoraMessage.TYPE_CAMERA_TORCH_ON.equalsIgnoreCase(type)) {
+                        Log.e("ooooooooooo", "开关闪光灯");
+                        // 开关闪光灯
+                        if (!mCurrentCameraIsBack) {
+                            String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
+                            showToast(msg);
+                            sendCameraTorch(false, msg);
+                            return;
+                        }
+
+                        boolean on = Utils.isOn(msgtype, type);
+                        if (on) {
+                            if (mCurrentCameraIsBack) {
+                                if (mAgoraRtcEngine.isCameraTorchSupported()) {
+                                    mAgoraRtcEngine.setCameraTorchOn(on);
+                                    mIsOnTorch = true;
+                                    sendCameraTorch(true, "");
+                                } else {
+                                    String msg = Utils.getString(getApplicationContext(), R.string.vec_no_support_feature);
+                                    mIsOnTorch = false;
+                                    sendCameraTorch(false, msg);
+                                }
+
+                            } else {
+                                String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
+                                sendCameraTorch(false, msg);
+                                showToast(msg);
+                            }
+                        } else {
+                            if (mCurrentCameraIsBack) {
+                                if (mAgoraRtcEngine.isCameraTorchSupported()) {
+                                    mAgoraRtcEngine.setCameraTorchOn(on);
+                                    mIsOnTorch = false;
+                                    sendCameraTorch(false, "");
+                                } else {
+                                    String msg = Utils.getString(getApplicationContext(), R.string.vec_no_support_feature);
+                                    mIsOnTorch = false;
+                                    sendCameraTorch(false, msg);
+                                }
+                            } else {
+                                String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
+                                sendCameraTorch(false, msg);
+                            }
+                        }
+                    } else if (AgoraMessage.TYPE_FLASH_LIGHT.equalsIgnoreCase(type)) {
+                        // 开关手电筒
+                        Log.e("ooooooooooo", "开关手电筒");
+                        // 判断是否为前置
+                        if (!mCurrentCameraIsBack) {
+                            String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
+                            showToast(msg);
+                            sendFlashLight(false, msg);
+                            return;
+                        }
+
+                        boolean on = Utils.isOn(msgtype, type);
+
+                        if (on) {
+                            if (mCurrentCameraIsBack) {
+                                if (mAgoraRtcEngine.isCameraTorchSupported()) {
+                                    mAgoraRtcEngine.setCameraTorchOn(on);
+                                    mIsOnFlashLight = true;
+                                    sendFlashLight(true, "");
+                                } else {
+                                    mIsOnFlashLight = false;
+                                    String msg = Utils.getString(getApplicationContext(), R.string.vec_no_support_feature);
+                                    sendFlashLight(false, msg);
+                                }
+
+                            } else {
+                                String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
+                                sendFlashLight(false, msg);
+                                showToast(msg);
+                            }
+                        } else {
+                            if (mCurrentCameraIsBack) {
+                                if (mAgoraRtcEngine.isCameraTorchSupported()) {
+                                    mAgoraRtcEngine.setCameraTorchOn(on);
+                                    mIsOnFlashLight = false;
+                                    sendFlashLight(false, "");
+                                } else {
+                                    String msg = Utils.getString(getApplicationContext(), R.string.vec_no_support_feature);
+                                    mIsOnFlashLight = false;
+                                    sendFlashLight(false, msg);
+                                }
+                            } else {
+                                String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
+                                sendFlashLight(false, msg);
+                            }
+                        }
+                    } else if (AgoraMessage.TYPE_CAMERA_CHANGE_ON.equalsIgnoreCase(type)) {
+                        // 切换摄像头
+                        int i = mAgoraRtcEngine.switchCamera();
+                        if (i == 0) {
+                            sendChangeCamera("");
+                            if (!mIsClickFace){
+                                mIsBackCamera = !mIsBackCamera;
+                            }
+                            mCurrentCameraIsBack = !mCurrentCameraIsBack;
+                        } else {
+                            String msg = Utils.getString(getApplicationContext(), R.string.vec_operation_fail);
+                            sendChangeCamera(msg);
+                        }
+
+                    }
+                    mPreType = type;
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+            }
+        });
+    }
+
+    private boolean isRun(String type, String action){
+        if (TextUtils.isEmpty(mPreType)){
+            return true;
+        }
+
+        if (!type.equals(mPreType)){
+            if ("cardocr_face_end".equals(action) || "cardocr_back_end".equals(action)
+                    || "cardocr_bank_end".equals(action) || "elecsign_end".equals(action)
+                    || "identityauth_end".equals(action)){
+                Log.e("uuuuuuuuuuuuuu", "mPreType = "+mPreType);
+                Log.e("uuuuuuuuuuuuuu", "action = "+action);
+                Log.e("uuuuuuuuuuuuuu", "type = "+type);
+                return false;
+            }else {
+                return true;
+            }
+        }
+        return true;
+    }
+
+    private void closePrePage(String type){
+        if (TextUtils.isEmpty(mPreType)){
+            return;
+        }
+
+        if (mPreType.equals(type)){
+            return;
+        }
+
+        if (AgoraMessage.TYPE_LINK_MESSAGE_PUSH.equalsIgnoreCase(mPreType)){
+            // 信息推送
+            if (isShowPushView()){
+                // 关闭
+                if (mLink != null){
+                    mLink.clear();
+                }
+            }
+        }else {
+            if (TextUtils.isEmpty(mPreCardOcrAction)){
+                return;
+            }
+            // 排除 action 上次记录为end
+            if (AgoraMessage.TYPE_CARD_OCR.equalsIgnoreCase(mPreType)){
+                if ("cardocr_face_start".equals(mPreCardOcrAction)/*
+                        || "cardocr_face_end".equals(mPreCardOcrAction)*/){
+                    // 识别身份证人像面
+                    if (isShowPushView()){
+                        // 关闭
+                        sdcardEnd();
+                    }
+                }else if ("cardocr_back_start".equals(mPreCardOcrAction)/*
+                        || "cardocr_back_end".equals(mPreCardOcrAction)*/){
+                    // 识别身份证国徽面
+                    if (isShowPushView()){
+                        // 关闭
+                        sdcardEnd();
+                    }
+                }else if ("cardocr_bank_start".equals(mPreCardOcrAction)/*
+                        || "cardocr_bank_end".equals(mPreCardOcrAction)*/){
+                    // 识别银行卡
+                    if (isShowPushView()){
+                        // 关闭
+                        sdcardEnd();
+                    }
+                }
+            }else if (AgoraMessage.TYPE_ELECSIGN.equalsIgnoreCase(mPreType)){
+                if ("elecsign_start".equals(mPreCardOcrAction)/*
+                        || "elecsign_end".equals(mPreCardOcrAction)*/){
+                    // 电子签名
+                    if (isShowPushView()){
+                        // 关闭
+                        signatureEnd();
+                    }
+                }
+            }else if (AgoraMessage.TYPE_IDENTITYAUTH.equalsIgnoreCase(mPreType)){
+                if ("identityauth_start".equals(mPreCardOcrAction)/*
+                        || "identityauth_end".equals(mPreCardOcrAction)*/){
+                    // 身份认证，人脸
+                    if (isShowPushView()){
+                        // 关闭
+                        faceEnd();
+                    }
+                }
+            }
+
+        }
+    }
+
+    public boolean isShowPushView(){
+        if (mPushView == null){
+            return false;
+        }
+
+        return mPushView.getVisibility() == View.VISIBLE;
+    }
+
+    /*@Override
     public void pushMessage(String msgtype, String type) {
         runOnUiThread(new Runnable() {
             @Override
@@ -2849,7 +3223,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
             }
         });
-    }
+    }*/
 
     // 关闭闪光灯和手电筒
     private void closeFlashLightAndTorch(){

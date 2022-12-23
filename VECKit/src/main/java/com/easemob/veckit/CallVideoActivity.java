@@ -84,6 +84,9 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     // 当前dialog类型
     private int mCurrentDialogType;
 
+    // 派对超时，通话结束
+    private TextView mTimeoutTv;
+
     private TextView mNameTv;
     private TextView mContentTv;
     private ImageView mTypeIv;
@@ -147,6 +150,7 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
             toChatUserName = AgoraMessage.newAgoraMessage().getCurrentChatUsername();
         }
         intent.putExtra(VideoCallWindowService.CURRENT_CHAT_USER_NAME, toChatUserName);
+        EMLog.e(TAG,"访客主动发送视频邀请 callingRequest");
         context.startActivity(intent);
     }
 
@@ -211,11 +215,12 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
 
             // 被动
             i.putExtra(VideoCallWindowService.INTENT_CALLING_TAG, VideoCallWindowService.INTENT_CALLING_TAG_PASSIVE_VALUE);
-
+            EMLog.e(TAG,"访客主动发送视频邀请，坐席响应访客视频邀请 callingResponse");
         }else {
             // 坐席主动发送邀请
             i.putExtra("msg", intent.getStringExtra("msg"));
             i.putExtra(VideoCallWindowService.INTENT_CALLING_TAG, VideoCallWindowService.INTENT_CALLING_TAG_ZUO_XI_ACTIVE_VALUE);
+            EMLog.e(TAG,"坐席主动发送视频邀请 callingResponse");
         }
 
         context.startActivity(i);
@@ -332,6 +337,9 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
 
     // 初始化评价相关控件
     private void initEvaluate() {
+        // 排队超时，通话结束
+        mTimeoutTv = $(R.id.timeoutTv);
+
         mEvaluateFlt = $(R.id.evaluateFlt);
         mFlowTagLayout = $(R.id.flowTagLayout);
         mRatingBar = $(R.id.ratingBar);
@@ -1206,7 +1214,6 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
                     jsonData, new ValueCallBack<String>() {
                         @Override
                         public void onSuccess(String value) {
-                            Log.e("rrrrrrrrrrrr","value = "+value);
                             if (isFinishing()){
                                 return;
                             }
@@ -1225,8 +1232,6 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
 
                         @Override
                         public void onError(int error, String errorMsg) {
-                            Log.e("rrrrrrrrrrrr","errorMsg = "+errorMsg);
-                            Log.e("rrrrrrrrrrrr","error = "+error);
                             if (isFinishing()){
                                 return;
                             }

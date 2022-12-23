@@ -14,30 +14,28 @@
 package com.easemob.helpdeskdemo.ui;
 
 import android.app.ProgressDialog;
-import android.content.DialogInterface;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.RatingBar;
-import android.widget.RatingBar.OnRatingBarChangeListener;
 import android.widget.TextView;
 
 import com.baidu.platform.comapi.map.E;
 import com.easemob.helpdeskdemo.R;
 import com.easemob.helpdeskdemo.ui.adapter.TagAdapter;
+import com.easemob.helpdeskdemo.widget.RatingBar;
 import com.easemob.helpdeskdemo.widget.flow.FlowTagLayout;
 import com.easemob.helpdeskdemo.widget.flow.OnTagSelectListener;
 import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
 import com.hyphenate.chat.Message;
-import com.hyphenate.chat.VecConfig;
 import com.hyphenate.helpdesk.callback.Callback;
 import com.hyphenate.helpdesk.callback.ValueCallBack;
 import com.hyphenate.helpdesk.easeui.ui.BaseActivity;
 import com.hyphenate.helpdesk.easeui.widget.ToastHelper;
+import com.hyphenate.helpdesk.model.ContentFactory;
 import com.hyphenate.helpdesk.model.EvaluationInfo;
 import com.hyphenate.helpdesk.model.MessageHelper;
 import com.hyphenate.helpdesk.util.Log;
@@ -107,7 +105,7 @@ public class SatisfactionActivity extends BaseActivity implements View.OnClickLi
 
 
         // 是否显示评价
-        AgoraMessage.asyncProblemSolvingOnServiceSessionResolved(ChatClient.getInstance().tenantId(), new ValueCallBack<String>() {
+        ChatClient.getInstance().chatManager().asyncProblemSolvingOnServiceSessionResolved(ChatClient.getInstance().tenantId(), new ValueCallBack<String>() {
             @Override
             public void onSuccess(String value) {
                 try {
@@ -156,10 +154,9 @@ public class SatisfactionActivity extends BaseActivity implements View.OnClickLi
 
     // 请对我的服务做出评价
     private void asyncGreetingMsgEnquiryInvite(){
-        AgoraMessage.asyncGreetingMsgEnquiryInvite(ChatClient.getInstance().tenantId(), mSessionId, new ValueCallBack<String>() {
+        ChatClient.getInstance().chatManager().asyncGreetingMsgEnquiryInvite(ChatClient.getInstance().tenantId(), mSessionId, new ValueCallBack<String>() {
             @Override
             public void onSuccess(String value) {
-                Log.e("ooooooooooo","asyncGreetingMsgEnquiryInvite value = "+value);
                 try {
                     JSONObject jsonObject = new JSONObject(value);
                     JSONArray entities = jsonObject.getJSONArray("entities");
@@ -175,7 +172,6 @@ public class SatisfactionActivity extends BaseActivity implements View.OnClickLi
 
             @Override
             public void onError(int error, String errorMsg) {
-                Log.e("ooooooooooo","onError errorMsg = "+errorMsg);
                 closePd();
             }
         });
@@ -203,7 +199,7 @@ public class SatisfactionActivity extends BaseActivity implements View.OnClickLi
 
     // 获取 请问客服是否解决了您的问题？
     private void asyncEvalSolveWord(){
-        AgoraMessage.asyncEvalSolveWord(ChatClient.getInstance().tenantId(), mSessionId, new ValueCallBack<String>() {
+        ChatClient.getInstance().chatManager().asyncEvalSolveWord(ChatClient.getInstance().tenantId(), mSessionId, new ValueCallBack<String>() {
             @Override
             public void onSuccess(String value) {
                 try {
@@ -236,10 +232,9 @@ public class SatisfactionActivity extends BaseActivity implements View.OnClickLi
 
     // 获取评价按钮：例如：已解决，未解决
     private void asyncResolutionParams(){
-        AgoraMessage.asyncResolutionParams(ChatClient.getInstance().tenantId(), mSessionId, new ValueCallBack<String>() {
+        ChatClient.getInstance().chatManager().asyncResolutionParams(ChatClient.getInstance().tenantId(), mSessionId, new ValueCallBack<String>() {
             @Override
             public void onSuccess(String value) {
-                Log.e("ooooooooooo","asyncResolutionParams value = "+value);
                 try {
                     JSONObject jsonObject = new JSONObject(value);
                     JSONArray entities = jsonObject.getJSONArray("entities");
@@ -349,7 +344,20 @@ public class SatisfactionActivity extends BaseActivity implements View.OnClickLi
         mFlowTagLayout.setTagCheckedMode(FlowTagLayout.FLOW_TAG_CHECKED_MULTI);
         mFlowTagLayout.setAdapter(tagAdapter = new TagAdapter<>(this));
         btnSubmit.setOnClickListener(new MyClickListener());
-        ratingBar.setOnRatingBarChangeListener(new OnRatingBarChangeListener() {
+        ratingBar.setStar(5);
+        ratingBar.setOnRatingChangeListener(new RatingBar.OnRatingChangeListener() {
+            @Override
+            public void onRatingChange(float ratingCount) {
+                if (ratingCount < 1.0f) {
+                    //ratingBar.setRating(0);
+                    ratingBar.setStar(0);
+                }
+                currentDegree = evaluationInfo.getDegree((int) ratingCount);
+                refreshLevelName();
+                refreshFlowLayout();
+            }
+        });
+        /*ratingBar.setOnRatingBarChangeListener(new OnRatingBarChangeListener() {
 
             @Override
             public void onRatingChanged(RatingBar ratingBar, float rating, boolean fromUser) {
@@ -360,7 +368,7 @@ public class SatisfactionActivity extends BaseActivity implements View.OnClickLi
                 refreshLevelName();
                 refreshFlowLayout();
             }
-        });
+        });*/
         mFlowTagLayout.setOnTagSelectListener(new OnTagSelectListener() {
             @Override
             public void onItemSelect(FlowTagLayout parent, List<Integer> selectedList) {
@@ -418,7 +426,27 @@ public class SatisfactionActivity extends BaseActivity implements View.OnClickLi
             }
 
 
-            MessageHelper.sendEvalMessage(currentMessage, etContent.getText().toString(), currentDegree, selectedTags, mResolutionParams, new Callback() {
+            // TODO 此处为测试，临时传visitor，实际值根据自己业务场景传值
+            String evaluateWay = "visitor";
+            try {
+                JSONObject jsonObject = MessageHelper.getContainerObject(currentMessage, EvaluationInfo.PARENT_NAME);
+                if (jsonObject != null) {
+                    JSONObject content = getJSONObject(jsonObject, EvaluationInfo.ARGS);
+                    if (content != null) {
+                        // Log.e("ppppppppppp","aa content = "+content);
+                        if (content.has("inviteId")){
+                            int inviteId = content.getInt("inviteId");
+                            evaluateWay = inviteId == 0 ? evaluateWay : "";
+                        }
+                    }
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+
+
+            // evaluateWay 评价方式：由前端传入，visitor访客主动评价，agent坐席邀请，system强制邀请访客点击关闭窗口或会话结束
+            MessageHelper.sendEvalMessage(currentMessage, evaluateWay, etContent.getText().toString(), currentDegree, selectedTags, mResolutionParams, new Callback() {
                 @Override
                 public void onSuccess() {
                     runOnUiThread(new Runnable() {
@@ -464,6 +492,17 @@ public class SatisfactionActivity extends BaseActivity implements View.OnClickLi
         if (pd != null && pd.isShowing()) {
             pd.dismiss();
         }
+    }
+
+    private static JSONObject getJSONObject(JSONObject jsonObject, String name) {
+        if (jsonObject.has(name) && !jsonObject.isNull(name)) {
+            try {
+                return jsonObject.getJSONObject(name);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
     }
 
     public void back(View view) {
