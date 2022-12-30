@@ -61,9 +61,11 @@ public class TestLoginActivity extends DemoBaseActivity {
         // 自动生成账号,此处每次都随机生成一个账号,为了演示.正式应从自己服务器获取账号
         final String account = Preferences.getInstance().getUserName();
         final String userPwd = Constant.DEFAULT_ACCOUNT_PWD;
+
         progressDialog = getProgressDialog();
         progressDialog.setMessage(getString(R.string.system_is_regist));
         progressDialog.show();
+
         // createAccount to huanxin server
         // if you have a account, this step will ignore
         ChatClient.getInstance().register(account, userPwd, new Callback() {

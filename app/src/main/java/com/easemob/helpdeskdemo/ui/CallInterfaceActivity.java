@@ -190,18 +190,32 @@ public class CallInterfaceActivity extends Activity {
                 String target = Preferences.getInstance().getCustomerAccount();
                 Log.e("ppppppppppppp", "getCustomerAccount = " + target);
 
-                /*ChatClient.getInstance().chatManager().getAppRelevanceSkillGroupMenuWithVisitorUserName(target, mName, new ValueCallBack<String>() {
+                ChatClient.getInstance().chatManager().getAppRelevanceSkillGroupMenuWithVisitorUserName(target, mName, new ValueCallBack<String>() {
                     @Override
                     public void onSuccess(String value) {
                         Log.e("ppppppppppppp", "value = " + value);
-                        mGetWelcomeMenuTv.setText(value);
+
+                        runOnUiThread(new Runnable() {
+                            @SuppressLint("SetTextI18n")
+                            @Override
+                            public void run() {
+                                mGetWelcomeMenuTv.setText(value);
+                            }
+                        });
                     }
 
                     @Override
                     public void onError(int error, String errorMsg) {
-                        mGetWelcomeMenuTv.setText("errorCode = " + error + ", errorMsg = " + errorMsg);
+                        runOnUiThread(new Runnable() {
+                            @SuppressLint("SetTextI18n")
+                            @Override
+                            public void run() {
+                                mGetWelcomeMenuTv.setText("errorCode = " + error + ", errorMsg = " + errorMsg);
+                            }
+                        });
+
                     }
-                });*/
+                });
 
             }
         });
@@ -217,18 +231,31 @@ public class CallInterfaceActivity extends Activity {
                 }
 
                 String target = Preferences.getInstance().getCustomerAccount();
-                /*ChatClient.getInstance().chatManager().getAppRelevanceEnterpriseWelcomeWithVisitorUserName(target, mName, new ValueCallBack<String>() {
+                ChatClient.getInstance().chatManager().getAppRelevanceEnterpriseWelcomeWithVisitorUserName(target, mName, new ValueCallBack<String>() {
                     @Override
                     public void onSuccess(String value) {
                         Log.e("pppppppppppp", "value = " + value);
-                        mGetTwoWelcomeMenuTv.setText(value);
+                        runOnUiThread(new Runnable() {
+                            @SuppressLint("SetTextI18n")
+                            @Override
+                            public void run() {
+                                mGetTwoWelcomeMenuTv.setText(value);
+                            }
+                        });
                     }
 
                     @Override
                     public void onError(int error, String errorMsg) {
-                        mGetTwoWelcomeMenuTv.setText("errorCode = " + error + ", errorMsg = " + errorMsg);
+                        runOnUiThread(new Runnable() {
+                            @SuppressLint("SetTextI18n")
+                            @Override
+                            public void run() {
+                                mGetTwoWelcomeMenuTv.setText("errorCode = " + error + ", errorMsg = " + errorMsg);
+                            }
+                        });
+
                     }
-                });*/
+                });
 
             }
         });
