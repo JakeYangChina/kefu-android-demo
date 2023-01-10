@@ -48,7 +48,6 @@ public class ChatActivity extends BaseActivity {
             getSupportFragmentManager().beginTransaction().add(R.id.container, chatFragment, chatFragmentTAG).commit();
             sendOrderOrTrack();
         }
-
     }
 
 
@@ -57,7 +56,6 @@ public class ChatActivity extends BaseActivity {
      */
     private void sendOrderOrTrack() {
         Bundle bundle = getIntent().getBundleExtra(Config.EXTRA_BUNDLE);
-        Log.e("ppppppp","");
         if (bundle != null) {
             //检查是否是从某个商品详情进来
             int selectedIndex = bundle.getInt(Constant.INTENT_CODE_IMG_SELECTED_KEY, Constant.INTENT_CODE_IMG_SELECTED_DEFAULT);

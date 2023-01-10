@@ -182,6 +182,7 @@ public class MainActivity extends DemoBaseActivity implements OnBottomNavigation
 
         // 给新版vec呼叫页面设置用户名称
         VecConfig.newVecConfig().setUserName(Preferences.getInstance().getNickName());
+
     }
 
 
