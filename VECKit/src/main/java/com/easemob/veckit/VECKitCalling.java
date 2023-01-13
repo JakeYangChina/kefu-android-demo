@@ -23,6 +23,7 @@ import com.hyphenate.chat.Message;
 import com.hyphenate.chat.VecConfig;
 import com.hyphenate.helpdesk.callback.ValueCallBack;
 import com.hyphenate.helpdesk.util.Log;
+import com.hyphenate.util.EMLog;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -36,6 +37,7 @@ public class VECKitCalling extends Activity {
 
     // 主动请求
     public static void callingRequest(Context context, String toChatUserName){
+        EMLog.e("VECVideo","客户呼叫坐席 主动请求 VECKitCalling.callingRequest toChatUserName = "+toChatUserName);
         Intent intent = new Intent(context, VECKitCalling.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         if (TextUtils.isEmpty(toChatUserName)){
@@ -47,11 +49,13 @@ public class VECKitCalling extends Activity {
 
     // 满意度评价
     public static void callingRetry(Context context, String content){
+        EMLog.e("VECVideo","唤起满意度评价 VECKitCalling.callingRetry content = "+content);
         CallVideoActivity.startDialogTypeRetry(context, content);
     }
 
     // 被动请求
     public static void callingResponse(Context context, Intent intent){
+        EMLog.e("VECVideo","坐席呼叫客户 被动请求 VECKitCalling.callingResponse");
         CallVideoActivity.callingResponse(context, intent);
     }
 
@@ -151,120 +155,39 @@ public class VECKitCalling extends Activity {
         });
     }
 
-    // 座席端请求视频，访客接通
+    /**
+     * 坐席发起视频邀请。访客发送接通信令
+     * @param content 显示内容
+     */
     public static void acceptCallFromZuoXi(String content){
-        String toUserName = AgoraMessage.newAgoraMessage().getCurrentChatUsername();
-        Message message = Message.createSendMessage(Message.Type.TXT);
-        message.setBody(new EMTextMessageBody(content));
-        message.setTo(toUserName);
-        try {
-            JSONObject object = new JSONObject();
-            JSONObject visitorRejectInvitation = new JSONObject();
-            visitorRejectInvitation.put("msg",content);
-            object.put("visitorAcceptInvitation",visitorRejectInvitation);
-            message.setAttribute("type","agorartcmedia/video");
-            message.setAttribute("msgtype",object);
-            message.setAttribute("targetSystem","kefurtc");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        ChatManager.getInstance().sendMessage(message);
-        VecConfig.newVecConfig().setIsOnLine(true);
+        EMLog.e("VECVideo","座席端请求视频，访客接通 指令 acceptCallFromZuoXi content = "+content);
+        AgoraMessage.acceptCallFromZuoXi(content);
     }
 
-    // 坐席发起邀请，未接通，访客挂断
+    /**
+     * 坐席发起视频邀请，访客未接通状态。访客发送挂断信令
+     * @param content 显示内容
+     */
     public static void endCallFromZuoXi(String content){
-        String toUserName = AgoraMessage.newAgoraMessage().getCurrentChatUsername();
-        Message message = Message.createSendMessage(Message.Type.TXT);
-        message.setBody(new EMTextMessageBody(content));
-        message.setTo(toUserName);
-
-        try {
-            JSONObject object = new JSONObject();
-            JSONObject visitorRejectInvitation = new JSONObject();
-            visitorRejectInvitation.put("msg",content);
-            object.put("visitorRejectInvitation",visitorRejectInvitation);
-            message.setAttribute("type","agorartcmedia/video");
-            message.setAttribute("msgtype",object);
-            message.setAttribute("targetSystem","kefurtc");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        ChatManager.getInstance().sendMessage(message);
-        VecConfig.newVecConfig().setIsOnLine(false);
+        EMLog.e("VECVideo","坐席发起邀请，未接通，访客挂断 指令 endCallFromZuoXi content = "+content);
+        AgoraMessage.endCallFromZuoXi(content);
     }
 
-    // 接通挂断
+    /**
+     * 视频已接通。发送挂断信令
+     * @param callBack 回调函数
+     */
     public static void endCallFromOn(ValueCallBack<String> callBack){
-        AgoraMessage.closeVec(ChatClient.getInstance().tenantId(), VecConfig.newVecConfig().getSessionId(),
-                VecConfig.newVecConfig().getVisitorId(), callBack);
+        EMLog.e("VECVideo","接通挂断 指令 endCallFromOn");
+        AgoraMessage.endCallFromOn(callBack);
     }
 
-    // 未接通挂断
+    /**
+     * 主动发起视频邀请，坐席未接通状态。主动发送挂断信令
+     */
     public static void endCallFromOff(){
-        String to = AgoraMessage.newAgoraMessage().getCurrentChatUsername();
-        Message message = requestOnAndOffMessage(0, to);
-        ChatManager.getInstance().sendMessage(message);
-        VecConfig.newVecConfig().setIsOnLine(false);
-    }
-
-    public static void sendNotify(String action, String type, String state, String msg) {
-        String toUserName = AgoraMessage.newAgoraMessage().getCurrentChatUsername();
-        Message message = Message.createSendMessage(Message.Type.CMD);
-        message.setBody(new EMCmdMessageBody(action));
-        message.setTo(toUserName);
-        try {
-            JSONObject obj = new JSONObject();
-            JSONObject flashlightcallback = new JSONObject();
-            flashlightcallback.put("action",state);
-            obj.put("msg",msg);
-            obj.put(type,flashlightcallback);
-
-            message.setAttribute("type","agorartcmedia/video");
-            message.setAttribute("msgtype",obj);
-            message.setAttribute("targetSystem","kefurtc");
-
-
-
-
-            JSONObject test = new JSONObject();
-            test.put("type","agorartcmedia/video");
-            test.put("msgtype",obj);
-            test.put("targetSystem","kefurtc");
-
-
-
-
-            Log.e("uuuuuuuuuuuuuu","test = "+test.toString());
-        } catch (Exception e) {
-            e.printStackTrace();
-            Log.e("uuuuuuuuuuuuuu","e = "+e.toString());
-        }
-        ChatManager.getInstance().sendMessage(message);
-        Log.e("yyyyyyyyyyy","发送成功");
-    }
-
-    // 接通，挂断，或者未接通挂断
-    @SuppressWarnings("SameParameterValue")
-    private static Message requestOnAndOffMessage(int callId, String toUserName){
-        Message message = Message.createSendMessage(Message.Type.CMD);
-        message.setBody(new EMCmdMessageBody(""));
-        message.setTo(toUserName);
-
-        try {
-            JSONObject object = new JSONObject();
-            JSONObject call = new JSONObject();
-            call.put("callId",((callId > 0) ? String.valueOf(callId) : "null"));
-            object.put("visitorCancelInvitation",call);
-
-            message.setAttribute("type","agorartcmedia/video");
-            message.setAttribute("msgtype",object);
-            message.setAttribute("targetSystem", "kefurtc");
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        return message;
+        EMLog.e("VECVideo","未接通挂断 指令 endCallFromOff");
+        AgoraMessage.endCallFromOff();
     }
 
     private void getTenantIdFunctionIcons(){
@@ -318,13 +241,10 @@ public class VECKitCalling extends Activity {
         try {
             JSONObject data = new JSONObject(value);
             JSONObject entity = data.getJSONObject("entity");
-            /*String avatar = entity.getString("avatar");
-            String logo = entity.getString("logo");*/
             VecConfig.newVecConfig().setTenantName(entity.getString("name"));
             String avatar = entity.getString("avatar");
             int i = avatar.indexOf("kefu.easemob.com");
             String substring = avatar.substring(i + "kefu.easemob.com".length());
-            Log.e("wwwwwwwwwwwwww","substring = "+ChatClient.getInstance().kefuRestServer().concat(substring));
             VecConfig.newVecConfig().setAvatarImage(ChatClient.getInstance().kefuRestServer().concat(substring));
         }catch (Exception e){
             e.printStackTrace();

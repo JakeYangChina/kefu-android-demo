@@ -23,6 +23,7 @@ import java.io.File;
 
 public class CloudActivity extends AppCompatActivity implements View.OnClickListener {
 
+    private static final String TAG = "CloudActivity";
     private View mPictureView;
     private View mVideoView;
     private View mVoiceView;
@@ -123,7 +124,7 @@ public class CloudActivity extends AppCompatActivity implements View.OnClickList
             Uri selectedImage = data.getData();
             if (selectedImage != null){
                 mRealPathFromUri = GetRealFilePathFromUri.getFileAbsolutePath(this, selectedImage);
-                Log.e("oooooooo","url getFilePathFromUri = "+mRealPathFromUri);
+                Log.e(TAG,"url getFilePathFromUri = "+mRealPathFromUri);
                 if (mRealPathFromUri != null){
                     /*File file = new File(mRealPathFromUri);
                     Log.e("oooooooo","url exists = "+file.exists());*/
@@ -149,10 +150,10 @@ public class CloudActivity extends AppCompatActivity implements View.OnClickList
             Uri selectedImage = data.getData();
             if (selectedImage != null){
                 mRealPathFromUri = GetRealFilePathFromUri.getFileAbsolutePath(this, selectedImage);
-                Log.e("oooooooo","url getFilePathFromUri = "+mRealPathFromUri);
+                Log.e(TAG,"url getFilePathFromUri = "+mRealPathFromUri);
                 if (mRealPathFromUri != null){
                     File file = new File(mRealPathFromUri);
-                    Log.e("oooooooo","url exists = "+file.exists());
+                    Log.e(TAG,"url exists = "+file.exists());
                     if (mClickType != getFileTypeByFilePath(mRealPathFromUri)){
                         Toast.makeText(this, "请选类型为"+getFileTypeName(mClickType)+"格式", Toast.LENGTH_LONG).show();
                         return;

@@ -236,7 +236,7 @@ public class CustomChatFragment extends ChatFragment implements ChatFragment.Eas
 
                     @Override
                     public void onError(int error, String errorMsg) {
-                        Log.e("oooooooooooooo", "errorMsg = "+errorMsg);
+                        Log.e(TAG, "errorMsg = "+errorMsg);
                         ChatClient.getInstance().chatManager().asyncSendInviteEvaluationMessage(toChatUsername, "", null);
                     }
                 });

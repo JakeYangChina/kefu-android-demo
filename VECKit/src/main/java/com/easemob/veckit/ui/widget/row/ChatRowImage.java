@@ -133,10 +133,10 @@ public class ChatRowImage extends ChatRowFile {
                 @Override
                 protected Bitmap doInBackground(Object... args) {
                     if (UriUtils.isFileExistByUri(context, thumbernailPath)) {
-                        Log.e("oooooooooooopppppp","isFileExistByUri thumbernailPath = "+getCacheBitmap(localFullSizePath));
+                        Log.e(TAG,"isFileExistByUri thumbernailPath = "+getCacheBitmap(localFullSizePath));
                         return getCacheBitmap(thumbernailPath);
                     } else if(UriUtils.isFileExistByUri(context, localFullSizePath)) {
-                        Log.e("oooooooooooopppppp","isFileExistByUri = "+getCacheBitmap(localFullSizePath));
+                        Log.e(TAG,"isFileExistByUri = "+getCacheBitmap(localFullSizePath));
                         return getCacheBitmap(localFullSizePath);
                     } else {
                         if (message.direct() == Message.Direct.SEND) {
@@ -156,7 +156,6 @@ public class ChatRowImage extends ChatRowFile {
                             }
                             return null;
                         }
-                        Log.e("oooooooooooopppppp","null");
                         return null;
                     }
                 }
@@ -164,10 +163,10 @@ public class ChatRowImage extends ChatRowFile {
                 protected void onPostExecute(Bitmap image) {
                     if (image != null) {
                         EMLog.d("img", "bitmap width = "+image.getWidth() + " height = "+image.getHeight());
-                        Log.d("oooooooooooopppppp", "bitmap width = "+image.getWidth() + " height = "+image.getHeight());
-                        Log.e("oooooooooooopppppp","imageView = "+imageView);
+                        Log.d(TAG, "bitmap width = "+image.getWidth() + " height = "+image.getHeight());
+                        Log.e(TAG,"imageView = "+imageView);
                         imageView.setImageBitmap(image);
-                        Log.e("oooooooooooopppppp","onPostExecute = "+image);
+                        Log.e(TAG,"onPostExecute = "+image);
                         ImageCache.getInstance().put(thumbernailPath.toString(), image);
                     }
                 }

@@ -2417,7 +2417,7 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
         mBottomContainerView.setOnBottomContainerViewPressStateListener(new BottomContainerView.OnViewPressStateListener() {
             @Override
             public boolean onPressStateChange(int index, boolean isClick, boolean isCustomState) {
-                Log.e("qqqqqqqqqoooooooooo", "index = " + index);
+                Log.e(TAG, "index = " + index);
 
 
                 // 默认 true 开启
@@ -3109,7 +3109,7 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
                         }
 
                     } else if (AgoraMessage.TYPE_FOCUS_CAMERA.equalsIgnoreCase(type)) {
-                        Log.e("ooooooooooo", "开关聚焦");
+                        Log.e(TAG, "开关聚焦");
                         // 聚焦
                         if (mAgoraRtcEngine.isCameraFocusSupported()) {
                             if (!mCurrentCameraIsBack) {
@@ -3142,7 +3142,7 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
                         }
 
                     } else if (AgoraMessage.TYPE_CAMERA_TORCH_ON.equalsIgnoreCase(type)) {
-                        Log.e("ooooooooooo", "开关闪光灯");
+                        Log.e(TAG, "开关闪光灯");
                         // 开关闪光灯
                         if (!mCurrentCameraIsBack) {
                             String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
@@ -3187,7 +3187,7 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
                         }
                     } else if (AgoraMessage.TYPE_FLASH_LIGHT.equalsIgnoreCase(type)) {
                         // 开关手电筒
-                        Log.e("ooooooooooo", "开关手电筒");
+                        Log.e(TAG, "开关手电筒");
                         // 判断是否为前置
                         if (!mCurrentCameraIsBack) {
                             String msg = Utils.getString(getApplicationContext(), R.string.vec_need_switch_rear_camera);
@@ -3369,35 +3369,60 @@ public class VideoCallWindowService extends Service implements IAgoraMessageNoti
         }
     }
 
-    // 手电筒
+    /**
+     * 智能辅助（手电筒）：通知坐席端开启手电筒的状态
+     * @param isOk 是否开启成功：true开启成功，false开启失败
+     * @param msg 内容（通知坐席端开启失败的原因，如果isOK指定为true，msg传入""）
+     */
     private void sendFlashLight(boolean isOk, String msg) {
-        Log.e("uuuuuuuuuuuuuu","sendFlashLight 不发送");
-        VECKitCalling.sendNotify("flashlightcallback", "flashlightcallback", isOk ? "on" : "off", msg);
+        AgoraMessage.sendFlashLight(isOk, msg);
+        // VECKitCalling.sendNotify("flashlightcallback", "flashlightcallback", isOk ? "on" : "off", msg);
     }
 
-    // 闪光灯
+    /**
+     * 智能辅助（闪光灯）：通知坐席端开启光灯的状态
+     * @param isOk 是否开启成功：true开启成功，false开启失败
+     * @param msg 内容（通知坐席端开启失败的原因，如果isOK指定为true，msg传入""）
+     */
     private void sendCameraTorch(boolean isOk, String msg) {
-        VECKitCalling.sendNotify("cameraTorchOncallback", "cameraTorchOncallback", isOk ? "on" : "off", msg);
+        AgoraMessage.sendCameraTorch(isOk, msg);
+        // VECKitCalling.sendNotify("cameraTorchOncallback", "cameraTorchOncallback", isOk ? "on" : "off", msg);
     }
 
-    // 聚焦
+    /**
+     * 智能辅助（聚焦）：通知坐席端开启的状态
+     * @param msg 内容（通知坐席端聚焦失败的原因，聚焦成功msg传入""）
+     */
     private void sendCameraFocus(String msg) {
-        VECKitCalling.sendNotify("focusCameracallback", "focusCameracallback", "", msg);
+        AgoraMessage.sendCameraFocus(msg);
+        // VECKitCalling.sendNotify("focusCameracallback", "focusCameracallback", "", msg);
     }
 
-    // 麦克风
+    /**
+     * 智能辅助（麦克风）：通知坐席端开启的状态
+     * @param msg 内容（通知坐席端开启失败的原因，麦克风开启成功msg传入""）
+     */
     private void sendMicrophone(String msg) {
-        VECKitCalling.sendNotify("microphonecallback", "microphonecallback", "", msg);
+        AgoraMessage.sendMicrophone(msg);
+        // VECKitCalling.sendNotify("microphonecallback", "microphonecallback", "", msg);
     }
 
-    // 相机
+    /**
+     * 智能辅助（相机）：通知坐席端开启的状态
+     * @param msg 内容（通知坐席端开启失败的原因，相机开启成功msg传入""）
+     */
     private void sendCamera(String msg) {
-        VECKitCalling.sendNotify("cameracallback", "cameracallback", "", msg);
+        AgoraMessage.sendCamera(msg);
+        // VECKitCalling.sendNotify("cameracallback", "cameracallback", "", msg);
     }
 
-    // 切换相机
+    /**
+     * 智能辅助（切换相机）：通知坐席端切换的状态
+     * @param msg 内容（通知坐席端切换相机失败的原因，切换相机成功msg传入""）
+     */
     private void sendChangeCamera(String msg) {
-        VECKitCalling.sendNotify("cameraChangecallback", "cameraChangecallback", "", msg);
+        AgoraMessage.sendChangeCamera(msg);
+        // VECKitCalling.sendNotify("cameraChangecallback", "cameraChangecallback", "", msg);
     }
 
     private boolean mIsClickFace;

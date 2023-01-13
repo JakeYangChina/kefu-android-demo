@@ -409,7 +409,6 @@ public class CallActivity extends DemoBaseActivity implements IAgoraMessageNotif
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Log.e("ooooooooo","onJoinChannelSuccess");
                                 Log.e(TAG, "onJoinChannelSuccess uid = " + uid);
                                 int i = mAgoraRtcEngine.muteLocalAudioStream(!mCurrentLocalVoiceIsOpen);
                                 if (i == 0) {
