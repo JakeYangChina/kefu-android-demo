@@ -19,7 +19,9 @@ import android.content.Context;
 
 import androidx.multidex.MultiDex;
 
+import com.easemob.veckit.utils.AppStateVecCallback;
 import com.heytap.msp.push.HeytapPushManager;
+import com.hyphenate.helpdesk.videokit.uitls.AppStateCecCallback;
 import com.hyphenate.push.EMPushHelper;
 import com.hyphenate.push.EMPushType;
 import com.hyphenate.push.PushListener;
@@ -31,6 +33,8 @@ public class DemoApplication extends Application {
     public void onCreate() {
         super.onCreate();
 
+        AppStateVecCallback.init(this);
+        AppStateCecCallback.init(this);
         Preferences.init(this);
         DemoHelper.getInstance().init(this);
         //OPPO SDK升级到2.1.0后需要进行初始化

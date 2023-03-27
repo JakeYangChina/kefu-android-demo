@@ -148,7 +148,6 @@ public class ShopDetailsActivity extends DemoBaseActivity {
 		AgoraMessage.asyncGetTenantIdFunctionIcons(tenantId, new ValueCallBack<List<FunctionIconItem>>() {
 			@Override
 			public void onSuccess(List<FunctionIconItem> value) {
-
 				runOnUiThread(new Runnable() {
 					@Override
 					public void run() {
@@ -316,7 +315,7 @@ public class ShopDetailsActivity extends DemoBaseActivity {
 
 				// 获取华为 HMS 推送 token
 				HMSPushHelper.getInstance().getHMSToken(ShopDetailsActivity.this);
-				AgoraMessage.newAgoraMessage().setCurrentChatUsername(Preferences.getInstance().getCustomerAccount());
+				AgoraMessage.newAgoraMessage().setVecImServiceNumber(Preferences.getInstance().getCustomerAccount());
 				// TODO 发送vec视屏邀请
 				VECKitCalling.callingRequest(ShopDetailsActivity.this, Preferences.getInstance().getCustomerAccount());
 			}

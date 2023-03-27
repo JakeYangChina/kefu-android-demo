@@ -40,6 +40,7 @@ import com.hyphenate.chat.Message;
 import com.hyphenate.helpdesk.R;
 import com.hyphenate.helpdesk.callback.ValueCallBack;
 import com.hyphenate.helpdesk.easeui.UIProvider;
+import com.hyphenate.helpdesk.easeui.adapter.MessageAdapter;
 import com.hyphenate.helpdesk.easeui.provider.CustomChatRowProvider;
 import com.hyphenate.helpdesk.easeui.recorder.MediaManager;
 import com.hyphenate.helpdesk.easeui.runtimepermission.PermissionsManager;
@@ -424,7 +425,7 @@ public class ChatFragment extends BaseFragment implements ChatManager.MessageLis
 
     protected void onMessageListInit() {
         messageList.init(toChatUsername, chatFragmentListener != null ?
-                chatFragmentListener.onSetCustomChatRowProvider() : null);
+                chatFragmentListener.onSetCustomChatRowProvider() : null, callback);
         //设置list item里的控件的点击事件
         setListItemClickListener();
 
@@ -800,9 +801,14 @@ public class ChatFragment extends BaseFragment implements ChatManager.MessageLis
     }
 
     protected EaseChatFragmentListener chatFragmentListener;
+    protected MessageAdapter.IMessageAdapterItemViewCallback callback;
 
     public void setChatFragmentListener(EaseChatFragmentListener chatFragmentListener) {
         this.chatFragmentListener = chatFragmentListener;
+    }
+
+    public void setIMessageAdapterItemViewCallback(MessageAdapter.IMessageAdapterItemViewCallback callback){
+        this.callback = callback;
     }
 
     public interface EaseChatFragmentListener {

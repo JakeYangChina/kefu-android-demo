@@ -77,6 +77,23 @@ public class MessageList extends RelativeLayout {
         refreshSelectLast();
     }
 
+    public void init(String toChatUsername, CustomChatRowProvider customChatRowProvider, MessageAdapter.IMessageAdapterItemViewCallback callback) {
+        this.toChatUsername = toChatUsername;
+
+        conversation = ChatClient.getInstance().chatManager().getConversation(toChatUsername);
+        messageAdapter = new MessageAdapter(context, toChatUsername, listView);
+        messageAdapter.setShowAvatar(showAvatar);
+        messageAdapter.setShowUserNick(showUserNick);
+        messageAdapter.setMyBubbleBg(myBubbleBg);
+        messageAdapter.setOtherBuddleBg(otherBuddleBg);
+        messageAdapter.setCustomChatRowProvider(customChatRowProvider);
+        messageAdapter.setIMessageAdapterItemViewCallback(callback);
+        // 设置adapter显示消息
+        listView.setAdapter(messageAdapter);
+
+        refreshSelectLast();
+    }
+
     protected void parseStyle(Context context, AttributeSet attrs) {
         @SuppressLint("CustomViewStyleable") TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.EaseChatMessageList);
         showAvatar = ta.getBoolean(R.styleable.EaseChatMessageList_msgListShowUserAvatar, true);

@@ -71,9 +71,5 @@
     <style name="ligtht_default_style" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowAnimationStyle">@null</item>
     </style>
-<!--
-    <style name="horizontal_slide" parent="android:Theme.NoTitleBar">
-        <item name="android:windowAnimationStyle">@style/AnimFade2</item>
-    </style>
--->
+
 </resources>

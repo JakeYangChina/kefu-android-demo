@@ -31,7 +31,7 @@ public class ChatRowTransferGuideMenu extends ChatRow {
     Context mContext;
 
 
-    public ChatRowTransferGuideMenu(Context context, Message message, int position, BaseAdapter adapter) {
+    public   ChatRowTransferGuideMenu(Context context, Message message, int position, BaseAdapter adapter) {
         super(context, message, position, adapter);
         mContext = context;
     }
@@ -53,7 +53,23 @@ public class ChatRowTransferGuideMenu extends ChatRow {
 
     }
 
-    @Override
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     @Override
     protected void onSetUpView() {
         TransferGuideMenuInfo info;
         if((info = MessageHelper.getTransferGuideMenu(message)) != null){

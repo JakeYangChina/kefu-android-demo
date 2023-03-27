@@ -49,7 +49,7 @@ import com.herewhite.sdk.domain.WindowAppParam;
 import com.herewhite.sdk.domain.WindowParams;
 import com.hyphenate.agora.AgoraStreamItem;
 import com.hyphenate.agora.FunctionIconItem;
-import com.hyphenate.agora.IAgoraMessageNotify;
+import com.hyphenate.agora.ICecMessageNotify;
 import com.hyphenate.agora.ZuoXiSendRequestObj;
 import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
@@ -95,9 +95,9 @@ import io.agora.board.fast.model.FastInsertDocParams;
 import io.agora.board.fast.model.FastRegion;
 import io.agora.board.fast.model.FastRoomOptions;
 import io.agora.board.fast.model.FastStyle;
-import io.agora.rtc.Constants;
-import io.agora.rtc.IRtcEngineEventHandler;
-import io.agora.rtc.video.VideoEncoderConfiguration;
+import io.agora.rtc2.Constants;
+import io.agora.rtc2.IRtcEngineEventHandler;
+import io.agora.rtc2.video.VideoEncoderConfiguration;
 
 
 /**
@@ -106,7 +106,7 @@ import io.agora.rtc.video.VideoEncoderConfiguration;
  * date: 04/05/2018
  */
 
-public class CallActivity extends FragmentActivity implements IAgoraMessageNotify, VideoItemContainerView.OnVideoIconViewClickListener,
+public class CallActivity extends FragmentActivity implements ICecMessageNotify, VideoItemContainerView.OnVideoIconViewClickListener,
         FixHeightFrameLayout.ICloseFlatCallback {
 
     private static final String TAG = CallActivity.class.getSimpleName();
@@ -257,7 +257,7 @@ public class CallActivity extends FragmentActivity implements IAgoraMessageNotif
         showAndHidden(mBottomContainer, !mIsActive);
         showAndHidden(mActiveBottomContainer, mIsActive);
 
-        AgoraMessage.newAgoraMessage().registerAgoraMessageNotify(getClass().getSimpleName(), this);
+        AgoraMessage.newAgoraMessage().registerCecMessageNotify(getClass().getSimpleName(), this);
         if (mIsActive){
             findViewById(R.id.active_call_hangup).setOnClickListener(v -> {
                 Log.e("yyyyyyyyy","onClick");
@@ -374,7 +374,7 @@ public class CallActivity extends FragmentActivity implements IAgoraMessageNotif
         mStreams.clear();
 
 
-        AgoraMessage.newAgoraMessage().registerAgoraMessageNotify(getClass().getSimpleName(), this);
+        AgoraMessage.newAgoraMessage().registerCecMessageNotify(getClass().getSimpleName(), this);
 
         mAgoraRtcEngine = AgoraRtcEngine.builder()
                 .build(getApplicationContext(), mZuoXiSendRequestObj.getAppId(), new IRtcEngineEventHandler() {
@@ -940,6 +940,11 @@ public class CallActivity extends FragmentActivity implements IAgoraMessageNotif
 
     private void shareWindow() {
         // 执行屏幕共享进程，将 App ID，channel ID 等信息发送给屏幕共享进程
+        if (!Utils.isSupportScreenShare()){
+            showToast("此设备不支持屏幕分享！");
+            mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_SHARE), true);
+            return;
+        }
         if (!isSharing) {
             isSharing = true;
             /*ScreenCaptureParameters screenCaptureParameters = new ScreenCaptureParameters();
@@ -1859,7 +1864,7 @@ public class CallActivity extends FragmentActivity implements IAgoraMessageNotif
 
         mPopupWindow = null;
         mUids.clear();
-        AgoraMessage.newAgoraMessage().unRegisterAgoraMessageNotify(getClass().getSimpleName());
+        AgoraMessage.newAgoraMessage().unRegisterCecMessageNotify(getClass().getSimpleName());
         mIsClick = false;
         sendIsOnLineState(false);
         if (mRingtone != null && mRingtone.isPlaying()) {

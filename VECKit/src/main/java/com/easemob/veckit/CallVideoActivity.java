@@ -40,7 +40,7 @@ import com.easemob.veckit.utils.Utils;
 import com.easemob.veckit.utils.WaitNetworkUtils;
 import com.google.gson.Gson;
 import com.hyphenate.agora.FunctionIconItem;
-import com.hyphenate.agora.IEndCallback;
+import com.hyphenate.agora.IVecEndCallback;
 import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
 import com.hyphenate.chat.VecConfig;
@@ -56,10 +56,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.prefs.Preferences;
 
 
-public class CallVideoActivity extends BaseActivity implements View.OnClickListener, IEndCallback, RatingBar.OnRatingChangeListener {
+public class CallVideoActivity extends BaseActivity implements View.OnClickListener, IVecEndCallback, RatingBar.OnRatingChangeListener {
     private final static String TAG = CallVideoActivity.class.getSimpleName();
     public final static String DIALOG_TYPE_KEY = "dialog_type_key";
     public final static String LOAD_LOCAL_STYLE = "load_local_style";
@@ -376,7 +375,6 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     private void request(Callback callback) {
         String tenantId = ChatClient.getInstance().tenantId();// "77556"
         String configId = ChatClient.getInstance().getConfigId();
-
         if (TextUtils.isEmpty(configId)) {
             return;
         }
@@ -555,7 +553,6 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         EMLog.e(TAG, "发送请求建立视频 sendCmd");
         // ChatClient.getInstance().callManager().callVecVideo(Utils.getString(getApplicationContext(), R.string.vec_agent_to_visitor), mToChatUserName);
         AgoraMessage.callVecVideo(Utils.getString(getApplicationContext(), R.string.vec_agent_to_visitor));
-        EMLog.e(TAG, "发送请求建立视频 sendCmd 结束");
     }
 
     private Runnable mCloseTimerOut;

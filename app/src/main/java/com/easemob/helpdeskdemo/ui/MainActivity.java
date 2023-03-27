@@ -32,6 +32,7 @@ import android.view.WindowManager;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
+import com.hyphenate.cloud.HttpClientManager;
 import com.hyphenate.helpdesk.Error;
 import com.easemob.bottomnavigation.BottomNavigation;
 import com.easemob.bottomnavigation.OnBottomNavigationSelectedListener;
@@ -121,7 +122,8 @@ public class MainActivity extends DemoBaseActivity implements OnBottomNavigation
         String customerAccount = Preferences.getInstance().getCustomerAccount();
 
         if (!TextUtils.isEmpty(customerAccount)){
-            AgoraMessage.newAgoraMessage().setCurrentChatUsername(customerAccount);
+            AgoraMessage.newAgoraMessage().setVecImServiceNumber(customerAccount);
+            AgoraMessage.newAgoraMessage().setCecImServiceNumber(customerAccount);
         }
 
         FragmentTransaction trx = getSupportFragmentManager().beginTransaction();
@@ -182,6 +184,7 @@ public class MainActivity extends DemoBaseActivity implements OnBottomNavigation
 
         // 给新版vec呼叫页面设置用户名称
         VecConfig.newVecConfig().setUserName(Preferences.getInstance().getNickName());
+
 
     }
 

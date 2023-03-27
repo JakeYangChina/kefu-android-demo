@@ -86,6 +86,7 @@ public class MessageAdapter extends BaseAdapter {
 
     private MessageListItemClickListener itemClickListener;
     private CustomChatRowProvider customRowProvider;
+	private IMessageAdapterItemViewCallback mIMessageAdapterItemViewCallback;
     
     private boolean showUserNick;
     private boolean showAvatar;
@@ -357,8 +358,19 @@ public class MessageAdapter extends BaseAdapter {
 
 		//缓存的view的message很可能不是当前item的，传入当前message和position更新ui
 		((ChatRow)convertView).setUpView(message, position, itemClickListener);
-		
+
+		try{
+			onNotifyViewChanged(convertView, MessageHelper.getMessageExtType(message));
+		}catch (Exception e){
+			e.printStackTrace();
+		}
 		return convertView;
+	}
+
+	private void onNotifyViewChanged(View convertView, MessageHelper.ExtMsgType messageExtType) {
+		if (mIMessageAdapterItemViewCallback != null){
+			mIMessageAdapterItemViewCallback.onNotifyViewChanged(convertView, messageExtType);
+		}
 	}
 
 	public String getToChatUsername(){
@@ -395,6 +407,9 @@ public class MessageAdapter extends BaseAdapter {
 	    customRowProvider = rowProvider;
 	}
 
+	public void setIMessageAdapterItemViewCallback(IMessageAdapterItemViewCallback callback){
+		this.mIMessageAdapterItemViewCallback = callback;
+	}
 
     public boolean isShowUserNick() {
         return showUserNick;
@@ -414,6 +429,8 @@ public class MessageAdapter extends BaseAdapter {
     public Drawable getOtherBuddleBg() {
         return otherBuddleBg;
     }
-	
-	
+
+	public interface IMessageAdapterItemViewCallback{
+		void onNotifyViewChanged(View convertView, MessageHelper.ExtMsgType messageExtType);
+	}
 }

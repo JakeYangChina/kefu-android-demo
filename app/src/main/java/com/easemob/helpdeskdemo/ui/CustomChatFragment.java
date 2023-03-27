@@ -88,6 +88,7 @@ public class CustomChatFragment extends ChatFragment implements ChatFragment.Eas
     protected void setUpView() {
         //这是新添加的扩展点击事件
         setChatFragmentListener(this);
+        // setIMessageAdapterItemViewCallback(this);
         super.setUpView();
         //可以在此处设置titleBar(标题栏)的属性
 //        titleBar.setBackgroundColor(getResources().getColor(android.R.color.holo_red_light));
@@ -222,7 +223,7 @@ public class CustomChatFragment extends ChatFragment implements ChatFragment.Eas
                 // TODO 这里简单处理下权限
                 // VideoCallWindowService.show(getContext());
                 // CallActivity.show(getContext());
-                Calling.callingRequest(getContext(), AgoraMessage.newAgoraMessage().getCurrentChatUsername());
+                Calling.callingRequest(getContext(), toChatUsername);
                 startVideoCall();
                 break;
             case ITEM_EVALUATION:

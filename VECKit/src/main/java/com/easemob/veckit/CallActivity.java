@@ -64,8 +64,8 @@ import com.herewhite.sdk.domain.WindowAppParam;
 import com.herewhite.sdk.domain.WindowParams;
 import com.hyphenate.agora.AgoraStreamItem;
 import com.hyphenate.agora.FunctionIconItem;
-import com.hyphenate.agora.IAgoraMessageNotify;
 import com.hyphenate.agora.IPushMessage;
+import com.hyphenate.agora.IVecMessageNotify;
 import com.hyphenate.agora.ZuoXiSendRequestObj;
 import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
@@ -92,9 +92,9 @@ import io.agora.board.fast.internal.PromiseResultAdapter;
 import io.agora.board.fast.model.FastRegion;
 import io.agora.board.fast.model.FastRoomOptions;
 import io.agora.board.fast.model.FastStyle;
-import io.agora.rtc.Constants;
-import io.agora.rtc.IRtcEngineEventHandler;
-import io.agora.rtc.video.VideoEncoderConfiguration;
+import io.agora.rtc2.Constants;
+import io.agora.rtc2.IRtcEngineEventHandler;
+import io.agora.rtc2.video.VideoEncoderConfiguration;
 
 
 /**
@@ -103,7 +103,7 @@ import io.agora.rtc.video.VideoEncoderConfiguration;
  * date: 04/05/2018
  */
 
-public class CallActivity extends Activity implements IAgoraMessageNotify, VideoItemContainerView.OnVideoIconViewClickListener,
+public class CallActivity extends Activity implements IVecMessageNotify, VideoItemContainerView.OnVideoIconViewClickListener,
         FixHeightFrameLayout.ICloseFlatCallback, IPushMessage {
 
     private static final String TAG = CallActivity.class.getSimpleName();
@@ -188,8 +188,9 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
     }
 
     // 主动发起呼叫
-    public static void show(Context context, String toChatUserName, Intent i){
+    public static void show(Context context, String vecImServiceNumber, Intent i){
         //VecConfig.newVecConfig().setVecVideo(true);
+        AgoraMessage.newAgoraMessage().setVecImServiceNumber(vecImServiceNumber);
         Intent intent = new Intent(context.getApplicationContext(), CallActivity.class);
         intent.putExtra("type", i.getStringExtra("type"));
         intent.putExtra("appid", i.getStringExtra("appid"));
@@ -200,7 +201,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra("zuoXiSendRequestObj", zuoXiSendRequestObj);
         intent.putExtra(INTENT_CALLING_TAG, INTENT_CALLING_TAG_ACTIVE_VALUE);
-        intent.putExtra(CURRENT_CHAT_USER_NAME, toChatUserName);
+        intent.putExtra(CURRENT_CHAT_USER_NAME, vecImServiceNumber);
         context.startActivity(intent);
     }
 
@@ -397,7 +398,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         mStreams.clear();
 
 
-        AgoraMessage.newAgoraMessage().registerAgoraMessageNotify(getClass().getSimpleName(), this);
+        AgoraMessage.newAgoraMessage().registerVecMessageNotify(getClass().getSimpleName(), this);
 
         mAgoraRtcEngine = AgoraRtcEngine.builder()
                 .build(getApplicationContext(), mZuoXiSendRequestObj.getAppId(), new IRtcEngineEventHandler() {
@@ -823,15 +824,6 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         if (!isFullScreen){
             mFixHeightFrameLayout.showFullHeight();
         }
-
-        try {
-            if (fastRoom != null){
-                fastRoom.destroy();
-                fastRoom = null;
-            }
-        }catch (Exception e){
-            e.printStackTrace();
-        }
     }
 
     // 当全屏或者恢复正在执行动画，这时时不允许点击顶部的视图
@@ -940,50 +932,6 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
         return null;
     }
 
-    // * 2 * 12
-    /*private final ScreenSharingClient.IStateListener mListener = new ScreenSharingClient.IStateListener() {
-        @Override
-        public void onError(int error) {
-            Log.e(TAG, "Screen share service error happened: " + error);
-        }
-
-        @Override
-        public void onTokenWillExpire() {
-            //mSSClient.renewToken(null);
-            mSSClient.renewToken(mZuoXiSendRequestObj.getToken()); // Replace the token with your valid token
-        }
-
-        // 分享桌面，弹出对话框点击确认回调
-        @Override
-        public void onDialogStart() {
-            // 权限点击确认
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_SHARE), true);
-                    // 恢复初始化对象，加入缓存
-                    // 记录位置
-                    *//*initAgoraStreamItem();
-                    mAgoraRtcEngine.leaveChannel();
-                    mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_SHARE), true);
-                    new Handler(getMainLooper()).postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            joinChannel(mZuoXiSendRequestObj);
-                        }
-                    }, 200);*//*
-                }
-            });
-
-        }
-
-        @Override
-        public void onDialogDeniedError(int error) {
-            // 权限拒绝
-            isSharing = false;
-        }
-    };*/
-
     private void initAgoraStreamItem() {
         mCacheLocalViewShowPositionUid = -1;
         mCacheLocalViewRealUid = mLocalViewItem.getRealUid();
@@ -998,81 +946,23 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
     }
 
     private void shareWindow() {
+        if (!Utils.isSupportScreenShare()){
+            showToast(Utils.getString(getApplicationContext(), R.string.vec_no_support_share));
+            mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_SHARE), true);
+            return;
+        }
         // 执行屏幕共享进程，将 App ID，channel ID 等信息发送给屏幕共享进程
         if (!isSharing) {
             isSharing = true;
-            /*ScreenCaptureParameters screenCaptureParameters = new ScreenCaptureParameters();
-            //screenCaptureParameters.captureAudio = true;
-            screenCaptureParameters.captureVideo = true;
-            ScreenCaptureParameters.VideoCaptureParameters videoCaptureParameters = new ScreenCaptureParameters.VideoCaptureParameters();
-            screenCaptureParameters.videoCaptureParameters = videoCaptureParameters;*/
-            /*mSSClient.startLocalScreenSharing(this, mAgoraRtcEngine.getEngine(), screenCaptureParameters, new ExternalScreenSharingCallback() {
-                @Override
-                public void onExtenalScreenCaptureEvent(int event, int error) {
-
-                }
-            });*/
-
-            // mSSClient.updateScreenCaptureParametersInternal(true, false, videoCaptureParameters);
-
-            // String appId, String token, String channelName, int uid, VideoEncoderConfiguration vec
-            /*mSSClient.startExternalScreenSharing(this, mZuoXiSendRequestObj.getAppId(), mZuoXiSendRequestObj.getToken(),
-                    mZuoXiSendRequestObj.getChannel(), mZuoXiSendRequestObj.getUid(), new VideoEncoderConfiguration(
-                            getScreenDimensions(),
-                            VideoEncoderConfiguration.FRAME_RATE.FRAME_RATE_FPS_30,
-                            VideoEncoderConfiguration.STANDARD_BITRATE,
-                            VideoEncoderConfiguration.ORIENTATION_MODE.ORIENTATION_MODE_ADAPTIVE));*/
-
-
-            // Context context, ScreenCaptureParameters screenCaptureParameters, ExternalScreenSharingCallback callback
-
             mAgoraRtcEngine.startScreenCapture();
-
             mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_SHARE), false);
 
-            /*mSSClient.start(getApplication(), "74855635d3a64920b0c7ee3684f68a9f", "00674855635d3a64920b0c7ee3684f68a9fIAAXCVKXKtDOGEC4VAK93Q1ykf5PGtEY6NC9lbICNW6SKho6pkUAAAAAEACr2kwLZ5B7YgEAAQBmkHti",
-                    "huanxin", 0, new VideoEncoderConfiguration(
-                            getScreenDimensions(),
-                            VideoEncoderConfiguration.FRAME_RATE.FRAME_RATE_FPS_30,
-                            VideoEncoderConfiguration.STANDARD_BITRATE,
-                            VideoEncoderConfiguration.ORIENTATION_MODE.ORIENTATION_MODE_ADAPTIVE));*/
-
-            // mAgoraRtcEngine.aa();
-
         } else {
-            // mSSClient.stop(this);
             mAgoraRtcEngine.stopScreenCapture();
-            //mSSClient.stop();
             isSharing = false;
             mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_SHARE), true);
-            //joinChannel(mZuoXiSendRequestObj);
         }
     }
-
-    /*private void shareWindow() {
-        // 执行屏幕共享进程，将 App ID，channel ID 等信息发送给屏幕共享进程
-        if (!isSharing) {
-            mSSClient.start(getApplication(), mZuoXiSendRequestObj.getAppId(), mZuoXiSendRequestObj.getToken(),
-                    mZuoXiSendRequestObj.getChannel(), mZuoXiSendRequestObj.getUid(), new VideoEncoderConfiguration(
-                            getScreenDimensions(),
-                            VideoEncoderConfiguration.FRAME_RATE.FRAME_RATE_FPS_30,
-                            VideoEncoderConfiguration.STANDARD_BITRATE,
-                            VideoEncoderConfiguration.ORIENTATION_MODE.ORIENTATION_MODE_ADAPTIVE));
-
-            *//*mSSClient.start(getApplication(), "74855635d3a64920b0c7ee3684f68a9f", "00674855635d3a64920b0c7ee3684f68a9fIAAXCVKXKtDOGEC4VAK93Q1ykf5PGtEY6NC9lbICNW6SKho6pkUAAAAAEACr2kwLZ5B7YgEAAQBmkHti",
-                    "huanxin", 0, new VideoEncoderConfiguration(
-                            getScreenDimensions(),
-                            VideoEncoderConfiguration.FRAME_RATE.FRAME_RATE_FPS_30,
-                            VideoEncoderConfiguration.STANDARD_BITRATE,
-                            VideoEncoderConfiguration.ORIENTATION_MODE.ORIENTATION_MODE_ADAPTIVE));*//*
-            isSharing = true;
-        } else {
-            mSSClient.stop(getApplication());
-            isSharing = false;
-            mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_SHARE), false);
-            //joinChannel(mZuoXiSendRequestObj);
-        }
-    }*/
 
 
     @Override
@@ -1653,15 +1543,15 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                                         }
                                     });
                                 }else {
-                                    ChatClient.getInstance().callManager().endVecCall(mZuoXiSendRequestObj.getCallId(), isOnLine);
+                                    /*ChatClient.getInstance().callManager().endVecCall(mZuoXiSendRequestObj.getCallId(), isOnLine);
                                     if (mIsRetry){
                                         CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
-                                    }
+                                    }*/
                                     mHandler.sendEmptyMessage(MSG_CLEAR);
                                 }
 
                             }else {
-                                ChatClient.getInstance().callManager().endVecCall(0, true);
+                                //ChatClient.getInstance().callManager().endVecCall(0, true);
                                 mHandler.sendEmptyMessage(MSG_CLEAR);
                             }
 
@@ -1674,11 +1564,12 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                         @Override
                         public void run() {
                             // 拒接
-                            if (!mIsActive){
+                            /*if (!mIsActive){
                                 ChatClient.getInstance().callManager().endVecCall(mZuoXiSendRequestObj.getCallId(), false);
                             }else {
                                 ChatClient.getInstance().callManager().endVecCall(0, true);
-                            }
+                            }*/
+                            AgoraMessage.endVecCallFromZuoXi("超时拒接");
                             //stopForegroundService();
                             finish();
                             mHandler.sendEmptyMessage(MSG_CLEAR);
@@ -1850,14 +1741,14 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
 
     // 座席端主动挂断视频回调函数
-    @Override
+    /*@Override
     public void zuoXiToBreakOff() {
         // 先检测房间里是否还有人，如果没有人直接退出
         if (mUids.size() >= 1) {
             return;
         }
         mHandler.sendEmptyMessage(MSG_CALL_END);
-    }
+    }*/
 
 
     private final Map<Integer, ZuoXiSendRequestObj> mZuoXis = new ConcurrentHashMap<>();
@@ -1929,7 +1820,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
         AgoraMessage.newAgoraMessage().unRegisterVecPushMessage(getClass().getSimpleName());
         VecConfig.newVecConfig().setIsOnLine(false);
-        // VecConfig.newVecConfig().setVecVideo(false);
+        VecConfig.newVecConfig().setPopupView(false);
         mIsCreate = false;
         mIsStartBoard = false;
         mIsSend = false;
@@ -1938,7 +1829,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
 
         mPopupWindow = null;
         mUids.clear();
-        AgoraMessage.newAgoraMessage().unRegisterAgoraMessageNotify(getClass().getSimpleName());
+        AgoraMessage.newAgoraMessage().unRegisterVecMessageNotify(getClass().getSimpleName());
         mIsClick = false;
         sendIsOnLineState(false);
         /*if (mRingtone != null && mRingtone.isPlaying()) {
@@ -1961,14 +1852,10 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                 unregisterReceiver(mHeadsetReceiver);
                 mHeadsetReceiver = null;
             }
-
-            if (fastRoom != null){
-                fastRoom.destroy();
-                fastRoom = null;
-            }
         }catch (Exception e){
             e.printStackTrace();
         }
+
 
         if (mAudioManager != null) {
             mAudioManager.setMode(AudioManager.MODE_NORMAL);
@@ -2260,7 +2147,8 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
                         mFlatRoomItem.findViewById(R.id.full).setTag("0");
                         mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_FLAT), false);
                         // 发送请求到服务器，创建电子白板roomId，结果会回调createFlatRoom方法
-                        ChatClient.getInstance().callManager().createVecFlatRoom(mZuoXiSendRequestObj.getCallId());
+                        // ChatClient.getInstance().callManager().createVecFlatRoom(mZuoXiSendRequestObj.getCallId());
+                        AgoraMessage.createVecFlatRoom(mZuoXiSendRequestObj.getCallId());
                     } else {
                         showToast(Utils.getString(getApplicationContext(), R.string.vec_not_repeat_open_whiteboard));
                     }
@@ -3491,7 +3379,7 @@ public class CallActivity extends Activity implements IAgoraMessageNotify, Video
     }
 
     private void getAsyncVisitorId() {
-        AgoraMessage.getAsyncVisitorIdAndVecSessionId(AgoraMessage.newAgoraMessage().getCurrentChatUsername(), new ValueCallBack<String>() {
+        AgoraMessage.getAsyncVisitorIdAndVecSessionId(AgoraMessage.newAgoraMessage().getVecImServiceNumber(), new ValueCallBack<String>() {
             @Override
             public void onSuccess(String args) {
                 VecConfig.newVecConfig().setVisitorId(args);
