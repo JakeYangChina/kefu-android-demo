@@ -64,7 +64,7 @@ import com.herewhite.sdk.domain.WindowAppParam;
 import com.herewhite.sdk.domain.WindowParams;
 import com.hyphenate.agora.AgoraStreamItem;
 import com.hyphenate.agora.FunctionIconItem;
-import com.hyphenate.agora.IPushMessage;
+import com.hyphenate.agora.IVecPushMessage;
 import com.hyphenate.agora.IVecMessageNotify;
 import com.hyphenate.agora.ZuoXiSendRequestObj;
 import com.hyphenate.chat.AgoraMessage;
@@ -104,7 +104,7 @@ import io.agora.rtc2.video.VideoEncoderConfiguration;
  */
 
 public class CallActivity extends Activity implements IVecMessageNotify, VideoItemContainerView.OnVideoIconViewClickListener,
-        FixHeightFrameLayout.ICloseFlatCallback, IPushMessage {
+        FixHeightFrameLayout.ICloseFlatCallback, IVecPushMessage {
 
     private static final String TAG = CallActivity.class.getSimpleName();
     private final int MSG_CALL_ANSWER = 2;
@@ -172,6 +172,7 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
     private boolean mIsRetry;
     private TextView mCameraTextView;
     private IconTextView mCameraIcon;
+    private String mSessionId;
 
     // 默认是被动呼叫
     public static void show(Context context, Intent i){
@@ -182,6 +183,7 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
         intent.putExtra("zuoXiSendRequestObj", zuoXiSendRequestObj);
         intent.putExtra("to", i.getStringExtra("to"));
         intent.putExtra("from", i.getStringExtra("from"));
+        intent.putExtra("sessionId", i.getStringExtra("sessionId"));
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(INTENT_CALLING_TAG, INTENT_CALLING_TAG_PASSIVE_VALUE);
         context.startActivity(intent);
@@ -198,6 +200,7 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
         intent.putExtra("zuoXiSendRequestObj", zuoXiSendRequestObj);
         intent.putExtra("to", i.getStringExtra("to"));
         intent.putExtra("from", i.getStringExtra("from"));
+        intent.putExtra("sessionId", i.getStringExtra("sessionId"));
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra("zuoXiSendRequestObj", zuoXiSendRequestObj);
         intent.putExtra(INTENT_CALLING_TAG, INTENT_CALLING_TAG_ACTIVE_VALUE);
@@ -231,6 +234,7 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
         getWindow().setStatusBarColor(Color.BLACK);
 
         Intent intent = getIntent();
+        mSessionId = intent.getStringExtra("sessionId");
 
         mCurrentLocalVoiceIsOpen = VecConfig.newVecConfig().isOpenCamera();
         mCurrentLocalCameraIsOpen = VecConfig.newVecConfig().isOpenCamera();
@@ -439,7 +443,6 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
                             @Override
                             public void run() {
                                 Log.e(TAG, "onJoinChannelSuccess uid = " + uid);
-                                getAsyncVisitorId();
                                 int i = mAgoraRtcEngine.muteLocalAudioStream(!mCurrentLocalVoiceIsOpen);
                                 if (i == 0) {
                                     mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_VOICE), mCurrentLocalVoiceIsOpen);
@@ -1521,27 +1524,10 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
                             if (mChronometer != null){
                                 mChronometer.stop();
                             }
-
                             if (mZuoXiSendRequestObj != null){
                                 //ChatClient.getInstance().callManager().endVecCall(mZuoXiSendRequestObj.getCallId(), isOnLine);
                                 if (isOnLine){
-                                    VECKitCalling.endCallFromOn(new ValueCallBack<String>() {
-                                        @Override
-                                        public void onSuccess(String value) {
-                                            if (mIsRetry){
-                                                CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
-                                            }
-                                            mHandler.sendEmptyMessage(MSG_CLEAR);
-                                        }
-
-                                        @Override
-                                        public void onError(int error, String errorMsg) {
-                                            if (mIsRetry){
-                                                CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
-                                            }
-                                            mHandler.sendEmptyMessage(MSG_CLEAR);
-                                        }
-                                    });
+                                    endCallFromOn();
                                 }else {
                                     /*ChatClient.getInstance().callManager().endVecCall(mZuoXiSendRequestObj.getCallId(), isOnLine);
                                     if (mIsRetry){
@@ -1569,7 +1555,7 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
                             }else {
                                 ChatClient.getInstance().callManager().endVecCall(0, true);
                             }*/
-                            AgoraMessage.endVecCallFromZuoXi("超时拒接");
+                            VECKitCalling.endVecCallFromZuoXi("超时拒接");
                             //stopForegroundService();
                             finish();
                             mHandler.sendEmptyMessage(MSG_CLEAR);
@@ -3383,6 +3369,21 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
             @Override
             public void onSuccess(String args) {
                 VecConfig.newVecConfig().setVisitorId(args);
+                VECKitCalling.endCallFromOn(mSessionId,args,new ValueCallBack<String>() {
+                    @Override
+                    public void onSuccess(String value) {
+                        /*if (mIsRetry){
+                            CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
+                        }*/
+                    }
+
+                    @Override
+                    public void onError(int error, String errorMsg) {
+                        /*if (mIsRetry){
+                            CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
+                        }*/
+                    }
+                });
             }
 
             @Override
@@ -3391,4 +3392,12 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
         });
     }
 
+    private void endCallFromOn() {
+        mHandler.sendEmptyMessage(MSG_CLEAR);
+        if (mIsRetry){
+            CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
+        }
+
+        getAsyncVisitorId();
+    }
 }

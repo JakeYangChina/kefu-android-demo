@@ -54,7 +54,7 @@ public class CallReceiver extends BroadcastReceiver {
                 }
             }else if (AgoraMessage.TYPE_ENQUIRYINVITE.equalsIgnoreCase(type)){
                 // 满意度评价
-                VECKitCalling.callingRetry(context, intent.getStringExtra("content"));
+                VECKitCalling.callingEvaluation(context, intent.getStringExtra("content"));
             }
 
         }

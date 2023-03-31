@@ -20,6 +20,7 @@ import android.os.HandlerThread;
 import android.os.Message;
 import android.os.Parcelable;
 import android.os.SystemClock;
+import android.os.strictmode.WebViewMethodCalledOnWrongThreadViolation;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
@@ -74,6 +75,7 @@ import com.hyphenate.helpdesk.videokit.ui.views.IconTextView;
 import com.hyphenate.helpdesk.videokit.ui.views.MyChronometer;
 import com.hyphenate.helpdesk.videokit.ui.views.VideoItemContainerView;
 import com.hyphenate.helpdesk.videokit.uitls.Utils;
+import com.hyphenate.helpdesk.videokit.uitls.ViewOnClickUtils;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -179,12 +181,13 @@ public class CallActivity extends FragmentActivity implements ICecMessageNotify,
     }
 
     // 主动发起呼叫
-    public static void show(Context context, String toChatUserName){
+    public static void show(Context context, String cecImServiceNumber){
         VecConfig.newVecConfig().setVecVideo(false);
+        AgoraMessage.newAgoraMessage().setCecImServiceNumber(cecImServiceNumber);
         Intent intent = new Intent(context.getApplicationContext(), CallActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(INTENT_CALLING_TAG, INTENT_CALLING_TAG_ACTIVE_VALUE);
-        intent.putExtra(CURRENT_CHAT_USER_NAME, toChatUserName);
+        intent.putExtra(CURRENT_CHAT_USER_NAME, cecImServiceNumber);
         context.startActivity(intent);
     }
 
@@ -335,7 +338,19 @@ public class CallActivity extends FragmentActivity implements ICecMessageNotify,
         switchBottomItem();
 
         // 接通
-        ivAccept.setOnClickListener(new View.OnClickListener() {
+        /*ivAccept.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mBottomContainer.setVisibility(View.GONE);
+                mBottomContainerView.setVisibility(View.VISIBLE);
+                mIsClick = true;
+                sendIsOnLineState(true);
+                mHandler.sendEmptyMessage(MSG_CALL_ANSWER);
+            }
+        });*/
+
+        // 接通
+        ViewOnClickUtils.onClick(ivAccept, new ViewOnClickUtils.OnClickListener() {
             @Override
             public void onClick(View v) {
                 mBottomContainer.setVisibility(View.GONE);
@@ -347,7 +362,16 @@ public class CallActivity extends FragmentActivity implements ICecMessageNotify,
         });
 
         // 挂断
-        ivHangup.setOnClickListener(new View.OnClickListener() {
+        /*ivHangup.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mIsClick = true;
+                mHandler.sendEmptyMessage(MSG_CALL_END);
+            }
+        });*/
+
+        // 挂断
+        ViewOnClickUtils.onClick(ivHangup, new ViewOnClickUtils.OnClickListener() {
             @Override
             public void onClick(View v) {
                 mIsClick = true;
@@ -2063,6 +2087,10 @@ public class CallActivity extends FragmentActivity implements ICecMessageNotify,
 
             @Override
             public boolean onPressStateChange(int index, boolean isClick, boolean isCustomState) {
+                if (mIconDatas == null || index >= mIconDatas.size()){
+                    return false;
+                }
+
                 // 默认 true 开启
                 if (BottomContainerView.ViewIconData.TYPE_ITEM_VOICE.equalsIgnoreCase(mIconDatas.get(index).getName())) {
                     // 声音

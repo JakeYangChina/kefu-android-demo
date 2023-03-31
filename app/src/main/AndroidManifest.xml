@@ -210,6 +210,9 @@
         <activity android:name=".ui.TestLoginActivity"
             android:screenOrientation="portrait"
             android:theme="@style/horizontal_slide"/>
+        <activity android:name=".ui.GuideActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/horizontal_slide"/>
         <!--推送配置项-->
         <meta-data
             android:name="com.vivo.push.api_key"

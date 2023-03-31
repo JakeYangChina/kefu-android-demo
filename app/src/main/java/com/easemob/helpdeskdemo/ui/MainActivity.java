@@ -121,6 +121,7 @@ public class MainActivity extends DemoBaseActivity implements OnBottomNavigation
         setContentView(R.layout.em_activity_main);
         String customerAccount = Preferences.getInstance().getCustomerAccount();
 
+
         if (!TextUtils.isEmpty(customerAccount)){
             AgoraMessage.newAgoraMessage().setVecImServiceNumber(customerAccount);
             AgoraMessage.newAgoraMessage().setCecImServiceNumber(customerAccount);
@@ -187,7 +188,6 @@ public class MainActivity extends DemoBaseActivity implements OnBottomNavigation
 
 
     }
-
 
     @Override
     protected void onStart() {
@@ -312,6 +312,10 @@ public class MainActivity extends DemoBaseActivity implements OnBottomNavigation
         DemoHelper.getInstance().pushActivity(this);
         ChatClient.getInstance().chatManager().addMessageListener(messageListener);
         DemoHelper.getInstance().showNotificationPermissionDialog();
+
+
+        ChatClient.getInstance().changeConfigId("e123544e-1f36-4ca0-a666-135bb2f04466");
+        AgoraMessage.newAgoraMessage().setVecImServiceNumber("kefuchannelimid_392654");
     }
 
     @Override

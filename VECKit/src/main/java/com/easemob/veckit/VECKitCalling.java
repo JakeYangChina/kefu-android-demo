@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.widget.Toast;
@@ -12,6 +13,7 @@ import androidx.annotation.Nullable;
 
 import com.easemob.veckit.utils.Utils;
 import com.hyphenate.agora.FunctionIconItem;
+import com.hyphenate.agora.ZuoXiSendRequestObj;
 import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
 import com.hyphenate.chat.ChatManager;
@@ -20,11 +22,14 @@ import com.hyphenate.chat.Message;
 import com.hyphenate.chat.VecConfig;
 import com.hyphenate.helpdesk.callback.ValueCallBack;
 import com.hyphenate.helpdesk.easeui.util.FlatFunctionUtils;
+import com.hyphenate.helpdesk.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.List;
+
+import static com.easemob.veckit.CallVideoActivity.CONFIG_ID_KEY;
 
 public class VECKitCalling extends Activity {
 
@@ -32,15 +37,16 @@ public class VECKitCalling extends Activity {
     private ProgressDialog mDialog;
 
     // 主动请求
-    public static void callingRequest(Context context, String toChatUserName){
+    public static void callingRequest(Context context, String vecImServiceNumber, String configId){
+        ChatClient.getInstance().changeConfigId(configId);
         Intent intent = new Intent(context, VECKitCalling.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.putExtra(VideoCallWindowService.CURRENT_CHAT_USER_NAME, toChatUserName);
+        intent.putExtra(VideoCallWindowService.CURRENT_CHAT_USER_NAME, vecImServiceNumber);
         context.startActivity(intent);
     }
 
     // 满意度评价
-    public static void callingRetry(Context context, String content){
+    public static void callingEvaluation(Context context, String content){
         if (!VecConfig.newVecConfig().isPopupView()){
             CallVideoActivity.startDialogTypeRetry(context, content);
         }
@@ -49,6 +55,50 @@ public class VECKitCalling extends Activity {
     // 被动请求
     public static void callingResponse(Context context, Intent intent){
         CallVideoActivity.callingResponse(context, intent);
+    }
+
+
+    // VEC 坐席主动发起视频邀请 通知
+    public static void onAgentRequest(Context context, String msg, String sessionId, Message message){
+        Intent intent = new Intent();
+        intent.putExtra("zuo_xi_active",1); // 1 为坐席主动发送视频邀请
+        intent.putExtra("msg",msg);
+        intent.putExtra("to", message.to());
+        intent.putExtra("from", message.from());
+        intent.putExtra("message", message);
+        intent.putExtra("sessionId", sessionId);
+        callingResponse(context, intent);
+    }
+
+    // VEC 坐席主动发起视频邀请，访客接听，响应
+    public static void onVisitorAnswerResponse(Context context, ZuoXiSendRequestObj obj, String sessionId, Message message){
+        Intent intent = new Intent();
+        intent.putExtra("zuo_xi_active",0); // 1 为坐席主动发送视频邀请
+        intent.putExtra("zuoXiSendRequestObj", obj);
+        intent.putExtra("to", message.to());
+        intent.putExtra("from", message.from());
+        intent.putExtra("message", message);
+        intent.putExtra("sessionId", sessionId);
+        callingResponse(context, intent);
+    }
+
+    // VEC 访客主动发送视频邀请，坐席接通
+    public static void onAgentAnswerResponse(Context context, ZuoXiSendRequestObj obj, String sessionId, Message message){
+        Intent intent = new Intent();
+        intent.putExtra("zuo_xi_active",0); // 1 为坐席主动发送视频邀请
+        intent.putExtra("zuoXiSendRequestObj", obj);
+        intent.putExtra("to", message.to());
+        intent.putExtra("from", message.from());
+        intent.putExtra("message", message);
+        intent.putExtra("sessionId", sessionId);
+        callingResponse(context, intent);
+    }
+
+    // 满意度评价
+    public static void onEvaluation(Context context, String content){
+        if (!VecConfig.newVecConfig().isPopupView()){
+            CallVideoActivity.startDialogTypeRetry(context, content);
+        }
     }
 
     @Override
@@ -65,7 +115,7 @@ public class VECKitCalling extends Activity {
         // 请求灰度
         // getTenantIdFunctionIcons();
 
-        String configId = ChatClient.getInstance().getConfigId();
+        String configId = getConfigId();
         if (TextUtils.isEmpty(configId)){
             Toast.makeText(VECKitCalling.this, Utils.getString(getApplicationContext(), R.string.vec_config_setting), Toast.LENGTH_LONG).show();
             finish();
@@ -89,7 +139,8 @@ public class VECKitCalling extends Activity {
             @Override
             public void run() {
                 String tenantId = ChatClient.getInstance().tenantId();// "77556"
-                String configId = ChatClient.getInstance().getConfigId();
+                String configId = getConfigId();
+
                 if (TextUtils.isEmpty(configId)){
                     mDialog.dismiss();
                     Toast.makeText(VECKitCalling.this, Utils.getString(getApplicationContext(), R.string.vec_config_setting), Toast.LENGTH_LONG).show();
@@ -148,38 +199,41 @@ public class VECKitCalling extends Activity {
      * @param content 显示内容
      */
     public static void acceptCallFromZuoXi(String content){
-        AgoraMessage.acceptVecCallFromZuoXi(content);
+        String to = AgoraMessage.newAgoraMessage().getVecImServiceNumber();
+        AgoraMessage.acceptVecCallFromZuoXi(content, to);
     }
 
     /**
      * 坐席发起视频邀请，访客未接通状态。访客发送挂断信令
      * @param content 显示内容
      */
-    public static void endCallFromZuoXi(String content){
-        AgoraMessage.endVecCallFromZuoXi(content);
+    public static void endVecCallFromZuoXi(String content){
+        String to = AgoraMessage.newAgoraMessage().getVecImServiceNumber();
+        AgoraMessage.endVecCallFromZuoXi(content, to);
     }
 
     /**
      * 视频已接通。发送挂断信令
      * @param callBack 回调函数
      */
-    public static void endCallFromOn(ValueCallBack<String> callBack){
-        AgoraMessage.endVecCallFromOn(callBack);
+    public static void endCallFromOn(String sessionId, String visitorId, ValueCallBack<String> callBack){
+        AgoraMessage.endVecCallFromOn(sessionId, visitorId, callBack);
     }
 
     /**
      * 主动发起视频邀请，坐席未接通状态。主动发送挂断信令
      */
     public static void endCallFromOff(){
-        AgoraMessage.endVecCallFromOff();
+        String to = AgoraMessage.newAgoraMessage().getVecImServiceNumber();
+        AgoraMessage.endVecCallFromOff(to);
     }
 
     /**
      * 主动发起视频邀请
      * @param content 显示的文字
      */
-    public static void callVecVideo(String content){
-        AgoraMessage.callVecVideo(content);
+    public static void callVecVideo(String content, String vecImServiceNumber){
+        AgoraMessage.callVecVideo(content, vecImServiceNumber);
     }
 
 
@@ -275,5 +329,24 @@ public class VECKitCalling extends Activity {
 
     private void showToast(Context context, String content){
         Toast.makeText(context.getApplicationContext(), content, Toast.LENGTH_LONG).show();
+    }
+
+    private String getConfigId(){
+        SharedPreferences sharedPreferences = getSharedPreferences("video_style", MODE_PRIVATE);
+        String configId = ChatClient.getInstance().getConfigId();
+        if (TextUtils.isEmpty(configId)){
+            if (sharedPreferences != null){
+                configId = sharedPreferences.getString(String.format(CONFIG_ID_KEY, mToChatUserName),"");
+            }
+        }else {
+            // 保存本地
+            // CONFIG_ID_KEY
+            if (sharedPreferences != null){
+                SharedPreferences.Editor edit = sharedPreferences.edit();
+                edit.putString(String.format(CONFIG_ID_KEY, mToChatUserName), configId);
+                edit.apply();
+            }
+        }
+        return configId;
     }
 }

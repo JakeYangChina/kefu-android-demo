@@ -9,9 +9,11 @@ import android.widget.BaseAdapter;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.google.gson.Gson;
 import com.hyphenate.chat.ChatClient;
 import com.hyphenate.chat.Message;
 import com.hyphenate.helpdesk.R;
+import com.hyphenate.helpdesk.callback.Callback;
 import com.hyphenate.helpdesk.easeui.widget.MessageList;
 import com.hyphenate.helpdesk.model.ContentFactory;
 import com.hyphenate.helpdesk.model.MessageHelper;
@@ -100,7 +102,7 @@ public class ChatRowTransferGuideMenu extends ChatRow {
                     public void onClick(View v) {
 
                         //存在上下文的机器人菜单消息
-                        if (MessageHelper.isTransferGuideMenu(message)) {
+                        /*if (MessageHelper.isTransferGuideMenu(message)) {
                             EMLog.d(TAG, "isTransferGuideMenu");
                             if (item.isLeaveMessage()) {
                                 EMLog.d(TAG, "item clicked");
@@ -111,6 +113,84 @@ public class ChatRowTransferGuideMenu extends ChatRow {
                                 Message sendMessage = Message.createSendMessageForMenu(item, message.from());
                                 if (sendMessage != null) {
                                     ChatClient.getInstance().chatManager().sendMessage(sendMessage);
+                                }
+                            }
+
+                        } else {
+                            EMLog.d(TAG, "unknow message");
+                        }*/
+
+                        //存在上下文的机器人菜单消息
+                        if (MessageHelper.isTransferGuideMenu(message)) {
+                            EMLog.d(TAG, "isTransferGuideMenu");
+                            if (item.isLeaveMessage()) {
+                                EMLog.d(TAG, "item clicked");
+                                if (itemClickListener != null) {
+                                    itemClickListener.onMessageItemClick(message, MessageList.ItemAction.ITEM_TO_NOTE);
+                                }
+                            } else {
+                                // 原先代码
+                                /*Message sendMessage = Message.createSendMessageForMenu(item, message.from());
+                                if (sendMessage != null) {
+                                    ChatClient.getInstance().chatManager().sendMessage(sendMessage);
+                                }*/
+
+
+                                Message sendMessage = Message.createSendMessageForMenu(item, message.from());
+                                if (sendMessage != null) {
+                                    /*if (item.getQueueType().equalsIgnoreCase("video")
+                                                || item.getQueueType().equalsIgnoreCase("txt")){
+                                            ChatClient.getInstance().chatManager().sendMessage(sendMessage, new Callback() {
+                                                @Override
+                                                public void onSuccess() {
+                                                    // TODO 点击机器人菜单条目，修改后代码
+                                                    // clickSendMessage(item);
+                                                    if (!item.getQueueType().equals("txt")) {
+                                                        onClickTransferGuideMenuItem(item);
+                                                    }
+                                                }
+
+                                                @Override
+                                                public void onError(int code, String error) {
+                                                    // TODO 点击机器人菜单条目，修改后代码
+                                                    // clickSendMessage(item);
+                                                    if (!item.getQueueType().equals("txt")) {
+                                                        onClickTransferGuideMenuItem(item);
+                                                    }
+                                                }
+
+                                                @Override
+                                                public void onProgress(int progress, String status) {
+
+                                                }
+                                            });
+                                        }else {
+                                            onClickTransferGuideMenuItem(item);
+                                        }*/
+
+                                    if (item.getQueueType().equalsIgnoreCase("txt")){
+                                        ChatClient.getInstance().chatManager().sendMessage(sendMessage, new Callback() {
+                                            @Override
+                                            public void onSuccess() {
+                                                // TODO 点击机器人菜单条目，修改后代码
+                                                onClickTransferGuideMenuItem(item);
+                                            }
+
+                                            @Override
+                                            public void onError(int code, String error) {
+                                                // TODO 点击机器人菜单条目，修改后代码
+                                                // clickSendMessage(item);
+                                                onClickTransferGuideMenuItem(item);
+                                            }
+
+                                            @Override
+                                            public void onProgress(int progress, String status) {
+
+                                            }
+                                        });
+                                    }else {
+                                        onClickTransferGuideMenuItem(item);
+                                    }
                                 }
                             }
 
@@ -145,5 +225,32 @@ public class ChatRowTransferGuideMenu extends ChatRow {
                 parentView.addView(textView, llLp);
             }
         }
+    }
+
+
+
+    public void onClickTransferGuideMenuItem(TransferGuideMenuInfo.Item item) {
+        if (mClickTransferGuideMenuItem != null){
+            mClickTransferGuideMenuItem.onClickGuideMenuItemCallVideo(item);
+        }
+
+        // 发广播
+        try {
+            Gson gson = new Gson();
+            String json = gson.toJson(item);
+            Intent intent = new Intent("guide.menu.item.action");
+            intent.putExtra("data",json);
+            mContext.getApplicationContext().sendBroadcast(intent);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    private OnClickTransferGuideMenuItemCallVideo mClickTransferGuideMenuItem;
+    public void setOnClickTransferGuideMenuItemCallVideo(OnClickTransferGuideMenuItemCallVideo item){
+        this.mClickTransferGuideMenuItem = item;
+    }
+    public interface OnClickTransferGuideMenuItemCallVideo {
+        void onClickGuideMenuItemCallVideo(TransferGuideMenuInfo.Item item);
     }
 }

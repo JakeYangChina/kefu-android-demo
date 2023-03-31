@@ -9,19 +9,25 @@ import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
 import com.hyphenate.helpdesk.callback.ValueCallBack;
 import com.hyphenate.helpdesk.easeui.util.FlatFunctionUtils;
+import com.hyphenate.helpdesk.videokit.R;
 import com.hyphenate.helpdesk.videokit.permission.FloatWindowManager;
 
 import java.util.List;
 
 public class Calling {
     // 主动
-    public static void callingRequest(Context context, String vecImServiceNumber){
+    public static void callingRequest(Context context, String cecImServiceNumber){
+        if (TextUtils.isEmpty(cecImServiceNumber)) {
+            throw new RuntimeException("cecImServiceNumber is null.");
+        }
+        // 获取灰度
         getTenantIdFunctionIcons();
+        // 发送视频邀请命令
+        ChatClient.getInstance().callManager().callVideo(context.getString(R.string.em_chat_invite_video_call), cecImServiceNumber);
         if (FloatWindowManager.getInstance().checkPermission(context)){
-            VideoCallWindowService.show(context, vecImServiceNumber);
+            VideoCallWindowService.show(context, cecImServiceNumber);
         }else {
-            // vecImServiceNumber = TextUtils.isEmpty(vecImServiceNumber) ? AgoraMessage.newAgoraMessage().getCurrentChatUsername() : vecImServiceNumber;
-            CallActivity.show(context, vecImServiceNumber);
+            CallActivity.show(context, cecImServiceNumber);
         }
     }
 

@@ -187,8 +187,9 @@ public class VideoCallWindowService extends Service implements ICecMessageNotify
     }
 
     // 主动发起呼叫
-    public static void show(Context context, String vecImServiceNumber){
+    public static void show(Context context, String cecImServiceNumber){
         VecConfig.newVecConfig().setVecVideo(false);
+        AgoraMessage.newAgoraMessage().setCecImServiceNumber(cecImServiceNumber);
         Intent intent = new Intent(context.getApplicationContext(), VideoCallWindowService.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(INTENT_CALLING_TAG, INTENT_CALLING_TAG_ACTIVE_VALUE);
@@ -2229,6 +2230,9 @@ public class VideoCallWindowService extends Service implements ICecMessageNotify
 
             @Override
             public boolean onPressStateChange(int index, boolean isClick, boolean isCustomState) {
+                if (mIconDatas == null || index >= mIconDatas.size()){
+                    return false;
+                }
                 // 默认 true 开启
                 if (BottomContainerView.ViewIconData.TYPE_ITEM_VOICE.equalsIgnoreCase(mIconDatas.get(index).getName())) {
                     // 声音

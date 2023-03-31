@@ -90,7 +90,7 @@ public class ShopDetailsActivity extends DemoBaseActivity {
 
 				if (ChatClient.getInstance().isLoggedInBefore()){
 					// TODO 发送vec视频邀请
-					VECKitCalling.callingRequest(ShopDetailsActivity.this, Preferences.getInstance().getCustomerAccount());
+					VECKitCalling.callingRequest(ShopDetailsActivity.this, Preferences.getInstance().getCustomerAccount(), ChatClient.getInstance().getConfigId());
 				}else {
 					createRandomAccountThenLoginChatServer();
 				}
@@ -317,7 +317,7 @@ public class ShopDetailsActivity extends DemoBaseActivity {
 				HMSPushHelper.getInstance().getHMSToken(ShopDetailsActivity.this);
 				AgoraMessage.newAgoraMessage().setVecImServiceNumber(Preferences.getInstance().getCustomerAccount());
 				// TODO 发送vec视屏邀请
-				VECKitCalling.callingRequest(ShopDetailsActivity.this, Preferences.getInstance().getCustomerAccount());
+				VECKitCalling.callingRequest(ShopDetailsActivity.this, Preferences.getInstance().getCustomerAccount(), ChatClient.getInstance().getConfigId());
 			}
 		});
 	}

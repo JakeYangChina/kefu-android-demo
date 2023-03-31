@@ -19,6 +19,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Parcelable;
 import android.os.SystemClock;
+import android.os.strictmode.WebViewMethodCalledOnWrongThreadViolation;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -73,7 +74,7 @@ import com.herewhite.sdk.domain.WindowAppParam;
 import com.herewhite.sdk.domain.WindowParams;
 import com.hyphenate.agora.AgoraStreamItem;
 import com.hyphenate.agora.FunctionIconItem;
-import com.hyphenate.agora.IPushMessage;
+import com.hyphenate.agora.IVecPushMessage;
 import com.hyphenate.agora.IVecMessageNotify;
 import com.hyphenate.agora.ZuoXiSendRequestObj;
 import com.hyphenate.chat.AgoraMessage;
@@ -108,14 +109,12 @@ import io.agora.rtc2.video.VideoEncoderConfiguration;
 public class VideoCallWindowService extends Service implements IVecMessageNotify,
         VideoItemContainerView.OnVideoIconViewClickListener,
         FixHeightFrameLayout.ICloseFlatCallback, CloudCallbackUtils.ICloudCallback,
-        IPushMessage, VecChatViewUtils.IVecChatViewCallback, AppStateVecCallback.IAppStateVecCallback {
+        IVecPushMessage, VecChatViewUtils.IVecChatViewCallback, AppStateVecCallback.IAppStateVecCallback {
 
     private WindowManager.LayoutParams mLayoutParams;
     private WindowManager mWindowManager;
     private View mShowView;
 
-    // 请求悬浮权限Permission
-    public static final int REQUEST_PERMISSION_CODE = 1000;
     private int mHeight;
     private int mWidth;
     private int mFitHeight;
@@ -137,7 +136,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
     public static final int INTENT_CALLING_TAG_PASSIVE_VALUE = 101;
     // 坐席主动呼叫
     public static final int INTENT_CALLING_TAG_ZUO_XI_ACTIVE_VALUE = 102;
-    // 当前聊天的IM服务号
+    // 当前VEC视频的IM服务号
     public static final String CURRENT_CHAT_USER_NAME = "CURRENT_CHAT_USER_NAME";
     private final int MSG_CALL_ANSWER = 2;
     private final int MSG_CALL_END = 3;
@@ -208,6 +207,8 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
     private View mFocusTv;
     private View mMoreItem;
 
+    private String mSessionId;
+
     // 主动发起的视频，未接听时，挂断
     /*public static void close(Context context) {
         Intent intent = new Intent(context.getApplicationContext(), VideoCallWindowService.class);
@@ -220,28 +221,22 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
     public static void show(Context context, Intent i) {
         Intent intent = new Intent(context.getApplicationContext(), VideoCallWindowService.class);
         intent.putExtra("nav_height", i.getIntExtra("nav_height", 0));
-        intent.putExtra("type", i.getStringExtra("type"));
-        intent.putExtra("appid", i.getStringExtra("appid"));
         Parcelable zuoXiSendRequestObj = i.getParcelableExtra("zuoXiSendRequestObj");
         intent.putExtra("zuoXiSendRequestObj", zuoXiSendRequestObj);
-        intent.putExtra("to", i.getStringExtra("to"));
-        intent.putExtra("from", i.getStringExtra("from"));
+        intent.putExtra("sessionId", i.getStringExtra("sessionId"));
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(INTENT_CALLING_TAG, INTENT_CALLING_TAG_PASSIVE_VALUE);
         context.startService(intent);
     }
 
-    // 主动发起呼叫
+    // 主动发起呼叫响应
     public static void show(Context context, String vecImServiceNumber, Intent i) {
         AgoraMessage.newAgoraMessage().setVecImServiceNumber(vecImServiceNumber);
         Intent intent = new Intent(context.getApplicationContext(), VideoCallWindowService.class);
         intent.putExtra("nav_height", i.getIntExtra("nav_height", 0));
-        intent.putExtra("type", i.getStringExtra("type"));
-        intent.putExtra("appid", i.getStringExtra("appid"));
         Parcelable zuoXiSendRequestObj = i.getParcelableExtra("zuoXiSendRequestObj");
         intent.putExtra("zuoXiSendRequestObj", zuoXiSendRequestObj);
-        intent.putExtra("to", i.getStringExtra("to"));
-        intent.putExtra("from", i.getStringExtra("from"));
+        intent.putExtra("sessionId", i.getStringExtra("sessionId"));
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra("zuoXiSendRequestObj", zuoXiSendRequestObj);
         intent.putExtra(INTENT_CALLING_TAG, INTENT_CALLING_TAG_ACTIVE_VALUE);
@@ -255,6 +250,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.e("oooooooooooo","onCreate");
         if (!FloatWindowManager.getInstance().checkPermission(this)) {
             mIsBack = true;
             stopSelf();
@@ -268,7 +264,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
             }else{
                 mIsBack = true;
                 stopSelf();
-                throw new RuntimeException("需要先初始化AppStateVecCallback类， 应在 Application 里调用 AppStateVecCallback.init(this)方法！！！");
+                throw new RuntimeException("需要先初始化AppStateCallback类， 应在 Application 里调用 AppStateCallback.init(this)方法！！！");
             }
         }
     }
@@ -311,12 +307,16 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
             return super.onStartCommand(intent, flags, startId);
         }
 
-        mCurrentLocalVoiceIsOpen = VecConfig.newVecConfig().isOpenCamera();
+        Log.e("oooooooooooo","onStartCommand timt = "+SystemClock.elapsedRealtime());
+        mCurrentLocalVoiceIsOpen = true;
         mCurrentLocalCameraIsOpen = VecConfig.newVecConfig().isOpenCamera();
+
+        mSessionId = intent.getStringExtra("sessionId");
 
         mNavHeight = intent.getIntExtra("nav_height", 0);
         // 默认被动呼叫
         int tag = intent.getIntExtra(INTENT_CALLING_TAG, INTENT_CALLING_TAG_PASSIVE_VALUE);
+        Log.e("oooooooooooo","tag = "+tag);
         if (tag == INTENT_CALLING_TAG_PASSIVE_VALUE) {
             // 默认被动呼叫
             if (!mIsCreate) {
@@ -327,6 +327,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
                 initVideo(mShowView, intent);
             }
         } else if (tag == INTENT_CALLING_TAG_ACTIVE_VALUE) {
+            // 执行
             mIsCreate = false;
             mCurrentChatUserName = intent.getStringExtra(CURRENT_CHAT_USER_NAME);
             if (!mPreActiveChatUserName.equals(mCurrentChatUserName)) {
@@ -570,6 +571,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         // TODO 此demo只为显示功能，具体功能逻辑根据自己项目实现
         // 动态显示底部导航条目
         switchBottomItem();
+
         // 接通
         ivAccept.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -585,7 +587,6 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         // 挂断
         ivHangup.setOnClickListener(v -> {
             mIsClick = true;
-            // VecConfig.newVecConfig().setVecVideo(false);
             mHandler.sendEmptyMessage(MSG_CALL_END);
         });
 
@@ -649,7 +650,6 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
                             @Override
                             public void run() {
                                 Log.e(TAG, "onJoinChannelSuccess uid = " + uid);
-                                getAsyncVisitorId();
                                 int i = mAgoraRtcEngine.muteLocalAudioStream(!mCurrentLocalVoiceIsOpen);
                                 if (i == 0) {
                                     mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_VOICE), mCurrentLocalVoiceIsOpen);
@@ -1883,23 +1883,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
                             if (mZuoXiSendRequestObj != null) {
                                 //ChatClient.getInstance().callManager().endVecCall(mZuoXiSendRequestObj.getCallId(), isOnLine);
                                 if (isOnLine) {
-                                    VECKitCalling.endCallFromOn(new ValueCallBack<String>() {
-                                        @Override
-                                        public void onSuccess(String value) {
-                                            if (mIsRetry) {
-                                                CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
-                                            }
-                                            mHandler.sendEmptyMessage(MSG_CLEAR);
-                                        }
-
-                                        @Override
-                                        public void onError(int error, String errorMsg) {
-                                            if (mIsRetry) {
-                                                CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
-                                            }
-                                            mHandler.sendEmptyMessage(MSG_CLEAR);
-                                        }
-                                    });
+                                    endCallFromOn();
                                 } else {
                                     /*ChatClient.getInstance().callManager().endVecCall(mZuoXiSendRequestObj.getCallId(), isOnLine);
                                     if (mIsRetry) {
@@ -1921,7 +1905,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
                         @Override
                         public void run() {
                             // 拒接
-                            AgoraMessage.endVecCallFromZuoXi("超时拒接");
+                            VECKitCalling.endVecCallFromZuoXi("超时拒接");
                             // ChatClient.getInstance().callManager().endVecCall(mZuoXiSendRequestObj.getCallId(), false);
                             //stopForegroundService();
                             mHandler.sendEmptyMessage(MSG_CLEAR);
@@ -3601,19 +3585,6 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         showAndHidden(mDrawAndDrawIcon, true);
     }
 
-    private void getAsyncVisitorId() {
-        AgoraMessage.getAsyncVisitorIdAndVecSessionId(AgoraMessage.newAgoraMessage().getVecImServiceNumber(), new ValueCallBack<String>() {
-            @Override
-            public void onSuccess(String args) {
-                VecConfig.newVecConfig().setVisitorId(args);
-            }
-
-            @Override
-            public void onError(int error, String errorMsg) {
-            }
-        });
-    }
-
     // 聊天，图库选择图片
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -3665,6 +3636,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         mIsRunClickFloatView = true;
         if (mIsAppToBackground && isSharing && !mIsStartShareToBackground){
             if (mAgoraRtcEngine != null && !mAgoraRtcEngine.isOpenScreenCapturePaused()){
+                screenCapturePaused();
                 mAgoraRtcEngine.screenCapturePaused();
             }
         }
@@ -3675,9 +3647,56 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         mIsRunClickFloatView = false;
         if (isSharing && !mIsStartShareToBackground){
             if (mAgoraRtcEngine != null && mAgoraRtcEngine.isOpenScreenCapturePaused()){
+                screenCaptureResumed();
                 mAgoraRtcEngine.screenCaptureResumed();
             }
         }
     }
 
+    private void screenCapturePaused(){
+
+    }
+
+    private void screenCaptureResumed(){
+
+    }
+
+    private void endCallFromOn() {
+        mHandler.sendEmptyMessage(MSG_CLEAR);
+        if (mIsRetry) {
+            CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
+        }
+        getAsyncVisitorId();
+    }
+
+    private void getAsyncVisitorId() {
+        final String sessionId = mSessionId;
+        AgoraMessage.getAsyncVisitorIdAndVecSessionId(AgoraMessage.newAgoraMessage().getVecImServiceNumber(), new ValueCallBack<String>() {
+            @Override
+            public void onSuccess(String args) {
+                VecConfig.newVecConfig().setVisitorId(args);
+                VECKitCalling.endCallFromOn(sessionId, args,new ValueCallBack<String>() {
+                    @Override
+                    public void onSuccess(String value) {
+                        /*if (mIsRetry) {
+                            CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
+                        }
+                        mHandler.sendEmptyMessage(MSG_CLEAR);*/
+                    }
+
+                    @Override
+                    public void onError(int error, String errorMsg) {
+                        /*if (mIsRetry) {
+                            CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
+                        }
+                        mHandler.sendEmptyMessage(MSG_CLEAR);*/
+                    }
+                });
+            }
+
+            @Override
+            public void onError(int error, String errorMsg) {
+            }
+        });
+    }
 }

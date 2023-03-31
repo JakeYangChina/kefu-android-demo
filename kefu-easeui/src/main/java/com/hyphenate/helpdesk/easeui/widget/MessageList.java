@@ -77,7 +77,7 @@ public class MessageList extends RelativeLayout {
         refreshSelectLast();
     }
 
-    public void init(String toChatUsername, CustomChatRowProvider customChatRowProvider, MessageAdapter.IMessageAdapterItemViewCallback callback) {
+    public void init(String toChatUsername, CustomChatRowProvider customChatRowProvider, MessageAdapter.IGuideMenuItemCallVideo callback) {
         this.toChatUsername = toChatUsername;
 
         conversation = ChatClient.getInstance().chatManager().getConversation(toChatUsername);
@@ -87,7 +87,7 @@ public class MessageList extends RelativeLayout {
         messageAdapter.setMyBubbleBg(myBubbleBg);
         messageAdapter.setOtherBuddleBg(otherBuddleBg);
         messageAdapter.setCustomChatRowProvider(customChatRowProvider);
-        messageAdapter.setIMessageAdapterItemViewCallback(callback);
+        messageAdapter.setGuideMenuItemCallVideo(callback);
         // 设置adapter显示消息
         listView.setAdapter(messageAdapter);
 
@@ -213,5 +213,9 @@ public class MessageList extends RelativeLayout {
         if (messageAdapter != null) {
             messageAdapter.setCustomChatRowProvider(rowProvider);
         }
+    }
+
+    public MessageAdapter getMessageAdapter() {
+        return messageAdapter;
     }
 }
