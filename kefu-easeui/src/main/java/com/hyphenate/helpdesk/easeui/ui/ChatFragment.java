@@ -44,10 +44,9 @@ import com.hyphenate.helpdesk.easeui.provider.CustomChatRowProvider;
 import com.hyphenate.helpdesk.easeui.recorder.MediaManager;
 import com.hyphenate.helpdesk.easeui.runtimepermission.PermissionsManager;
 import com.hyphenate.helpdesk.easeui.runtimepermission.PermissionsResultAction;
-import com.hyphenate.helpdesk.easeui.util.AppStateEaseUiCallback;
+import com.hyphenate.helpdesk.easeui.util.EaseUiReportUtils;
 import com.hyphenate.helpdesk.easeui.util.CommonUtils;
 import com.hyphenate.helpdesk.easeui.util.Config;
-import com.hyphenate.helpdesk.easeui.util.EaseUiReportDataUtils;
 import com.hyphenate.helpdesk.easeui.widget.AlertDialog;
 import com.hyphenate.helpdesk.easeui.widget.AlertDialog.AlertDialogUser;
 import com.hyphenate.helpdesk.easeui.widget.EaseChatInputMenu;
@@ -375,8 +374,6 @@ public class ChatFragment extends BaseFragment implements ChatManager.MessageLis
     public void onDestroy() {
         super.onDestroy();
         ChatClient.getInstance().emojiconManager().removeDelegate(this);
-        AutoReportUtils.getAutoReportUtils().destroy();
-        // EaseUiReportDataUtils.getEaseUiReportDataUtils().destroy();
     }
 
     @Override
@@ -385,6 +382,7 @@ public class ChatFragment extends BaseFragment implements ChatManager.MessageLis
         ChatClient.getInstance().chatManager().unbindChat();
         ChatClient.getInstance().chatManager().removeAgentInputListener(agentInputListener);
         ChatClient.getInstance().chatManager().removeVisitorWaitListener(visitorWaitListener);
+        EaseUiReportUtils.getEaseUiReportUtils().closeReport();
     }
 
     /**
@@ -596,15 +594,12 @@ public class ChatFragment extends BaseFragment implements ChatManager.MessageLis
         ChatClient.getInstance().chatManager().removeMessageListener(this);
         // 把此activity 从foreground activity 列表里移除
         UIProvider.getInstance().popActivity(getActivity());
-        AutoReportUtils.getAutoReportUtils().stopReport();
-        // EaseUiReportDataUtils.getEaseUiReportDataUtils().stopReport();
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        AutoReportUtils.getAutoReportUtils().startReport();
-        // EaseUiReportDataUtils.getEaseUiReportDataUtils().startReport();
+        EaseUiReportUtils.getEaseUiReportUtils().startReport(toChatUsername);
     }
 
     public void onBackPressed() {

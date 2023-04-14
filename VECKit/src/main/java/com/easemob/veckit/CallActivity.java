@@ -23,6 +23,7 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.TextureView;
 import android.view.View;
@@ -58,7 +59,10 @@ import com.easemob.veckit.ui.IconTextView;
 import com.easemob.veckit.ui.MyChronometer;
 import com.easemob.veckit.ui.SignatureTextView;
 import com.easemob.veckit.ui.VideoItemContainerView;
+import com.easemob.veckit.utils.AppStateVecCallback;
 import com.easemob.veckit.utils.Utils;
+import com.easemob.veckit.utils.VecKitReportUtils;
+import com.easemob.veckit.utils.ViewOnClickUtils;
 import com.herewhite.sdk.RoomParams;
 import com.herewhite.sdk.domain.WindowAppParam;
 import com.herewhite.sdk.domain.WindowParams;
@@ -104,7 +108,7 @@ import io.agora.rtc2.video.VideoEncoderConfiguration;
  */
 
 public class CallActivity extends Activity implements IVecMessageNotify, VideoItemContainerView.OnVideoIconViewClickListener,
-        FixHeightFrameLayout.ICloseFlatCallback, IVecPushMessage {
+        FixHeightFrameLayout.ICloseFlatCallback, IVecPushMessage, AppStateVecCallback.IAppStateVecCallback{
 
     private static final String TAG = CallActivity.class.getSimpleName();
     private final int MSG_CALL_ANSWER = 2;
@@ -240,6 +244,7 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
         mCurrentLocalCameraIsOpen = VecConfig.newVecConfig().isOpenCamera();
 
         AgoraMessage.newAgoraMessage().registerVecPushMessage(getClass().getSimpleName(), this);
+        AppStateVecCallback.getAppStateCallback().registerIAppStateVecCallback(this);
 
         // 默认被动呼叫
         int tag = intent.getIntExtra(INTENT_CALLING_TAG, INTENT_CALLING_TAG_PASSIVE_VALUE);
@@ -363,7 +368,19 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
         switchBottomItem();
 
         // 接通
-        ivAccept.setOnClickListener(new View.OnClickListener() {
+        /*ivAccept.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mBottomContainer.setVisibility(View.GONE);
+                mBottomContainerView.setVisibility(View.VISIBLE);
+                mIsClick = true;
+                sendIsOnLineState(true);
+                mHandler.sendEmptyMessage(MSG_CALL_ANSWER);
+            }
+        });*/
+
+        // 接通
+        ViewOnClickUtils.onClick(ivAccept, new ViewOnClickUtils.OnClickListener() {
             @Override
             public void onClick(View v) {
                 mBottomContainer.setVisibility(View.GONE);
@@ -375,7 +392,16 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
         });
 
         // 挂断
-        ivHangup.setOnClickListener(new View.OnClickListener() {
+        /*ivHangup.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mIsClick = true;
+                mHandler.sendEmptyMessage(MSG_CALL_END);
+            }
+        });*/
+
+        // 挂断
+        ViewOnClickUtils.onClick(ivHangup, new ViewOnClickUtils.OnClickListener() {
             @Override
             public void onClick(View v) {
                 mIsClick = true;
@@ -957,6 +983,7 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
         // 执行屏幕共享进程，将 App ID，channel ID 等信息发送给屏幕共享进程
         if (!isSharing) {
             isSharing = true;
+            mIsStartShareToBackground = VecConfig.newVecConfig().isSettingShareScreen();
             mAgoraRtcEngine.startScreenCapture();
             mBottomContainerView.setCustomItemState(getIconIndex(BottomContainerView.ViewIconData.TYPE_ITEM_SHARE), false);
 
@@ -1567,9 +1594,9 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
                         @Override
                         public void run() {
                             // 获取时间
-                            if (mChronometer != null){
+                            /*if (mChronometer != null){
                                 VecConfig.newVecConfig().setVideoCallTimer(mChronometer.getText().toString());
-                            }
+                            }*/
                             clear();
                         }
                     });
@@ -1700,6 +1727,15 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
         }
     }
 
+    /*@Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            moveTaskToBack(true);
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }*/
+
 
     private void openSpeakerOn() {
         try {
@@ -1804,8 +1840,10 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
             mAgoraRtcEngine.stopScreenCapture();
         }
 
+        VecKitReportUtils.getVecKitReportUtils().closeReport();
         AgoraMessage.newAgoraMessage().unRegisterVecPushMessage(getClass().getSimpleName());
-        VecConfig.newVecConfig().setIsOnLine(false);
+        AppStateVecCallback.getAppStateCallback().unRegisterIAppStateVecCallback(this);
+
         VecConfig.newVecConfig().setPopupView(false);
         mIsCreate = false;
         mIsStartBoard = false;
@@ -1878,7 +1916,6 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
 
     private void sendIsOnLineState(boolean isOnLine) {
         this.isOnLine = isOnLine;
-        VecConfig.newVecConfig().setIsOnLine(isOnLine);
         Intent intent = new Intent(ChatClient.getInstance().callManager().getIncomingCallBroadcastAction());
         intent.setAction("calling.state");
         intent.putExtra("state", isOnLine);
@@ -2005,6 +2042,10 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
 
             @Override
             public boolean onPressStateChange(int index, boolean isClick, boolean isCustomState) {
+                if (mIconDatas == null || index >= mIconDatas.size()){
+                    return false;
+                }
+
                 // 默认 true 开启
                 if (BottomContainerView.ViewIconData.TYPE_ITEM_VOICE.equalsIgnoreCase(mIconDatas.get(index).getName())) {
                     // 声音
@@ -3399,5 +3440,42 @@ public class CallActivity extends Activity implements IVecMessageNotify, VideoIt
         }
 
         getAsyncVisitorId();
+    }
+
+    // app进入后台，是否允许分享画面 true允许
+    private boolean mIsStartShareToBackground = false;
+    @Override
+    public void onAppForeground() {
+        VecKitReportUtils.getVecKitReportUtils().acceptVecVideoForegroundReport();
+        if (isSharing && !mIsStartShareToBackground){
+            if (mAgoraRtcEngine != null && mAgoraRtcEngine.isOpenScreenCapturePaused()){
+                screenCaptureResumed();
+                mAgoraRtcEngine.screenCaptureResumed();
+            }
+        }
+    }
+
+    @Override
+    public void onAppBackground() {
+        VecKitReportUtils.getVecKitReportUtils().acceptVecVideoBackgroundReport();
+        if (isSharing && !mIsStartShareToBackground){
+            if (mAgoraRtcEngine != null && !mAgoraRtcEngine.isOpenScreenCapturePaused()){
+                screenCapturePaused();
+                mAgoraRtcEngine.screenCapturePaused();
+            }
+        }
+    }
+
+    @Override
+    public void onActivityStopped(Activity activity) {
+
+    }
+
+    private void screenCapturePaused(){
+
+    }
+
+    private void screenCaptureResumed(){
+
     }
 }

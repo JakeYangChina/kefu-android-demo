@@ -1,5 +1,6 @@
 package com.easemob.veckit;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -24,12 +25,14 @@ import com.hyphenate.helpdesk.callback.ValueCallBack;
 import com.hyphenate.helpdesk.easeui.util.FlatFunctionUtils;
 import com.hyphenate.helpdesk.util.Log;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.List;
 
 import static com.easemob.veckit.CallVideoActivity.CONFIG_ID_KEY;
+import static com.easemob.veckit.CallVideoActivity.startDialogTypeEnd;
 
 public class VECKitCalling extends Activity {
 
@@ -38,6 +41,24 @@ public class VECKitCalling extends Activity {
 
     // 主动请求
     public static void callingRequest(Context context, String vecImServiceNumber, String configId){
+        callingRequest(context, vecImServiceNumber, configId, null, null, null);
+    }
+
+    // 主动请求
+
+    /**
+     * 主动请求 用在询前引导页面，点击条目发起视频通话
+     * @param context context
+     * @param vecImServiceNumber vec视频的IM服务号
+     * @param configId configId
+     * @param guideSessionId 会话id
+     * @param visitorUserId 访客id
+     * @param relatedImServiceNumber 会话IM服务号
+     */
+    public static void callingRequest(Context context, String vecImServiceNumber, String configId, String guideSessionId, String visitorUserId, String relatedImServiceNumber){
+        saveGuideSessionId(context, guideSessionId);
+        saveGuideVisitorUserId(context, visitorUserId);
+        saveGuideImServiceNumber(context, relatedImServiceNumber);
         ChatClient.getInstance().changeConfigId(configId);
         Intent intent = new Intent(context, VECKitCalling.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -123,7 +144,7 @@ public class VECKitCalling extends Activity {
         }
 
         mDialog.show();
-        if (VecConfig.newVecConfig().isEnableVideo()){
+        if (VecConfig.newVecConfig().isEnableVecVideo()){
             requestInfo();
         }else {
             showToast(VECKitCalling.this,Utils.getString(getApplicationContext(), R.string.vec_no_permission));
@@ -185,6 +206,31 @@ public class VECKitCalling extends Activity {
 
     }
 
+    /*private void getSettingShareScreen() {
+        // 同步方法获取
+        try {
+            String settingShareScreen = ChatClient.getInstance().chatManager().getSettingShareScreen(ChatClient.getInstance().tenantId());
+            Log.e("VECKitCalling","getSettingShareScreen = "+settingShareScreen);
+            JSONObject object = new JSONObject(settingShareScreen);
+            if (object.has("status")){
+                String status = object.getString("status");
+                if ("OK".equalsIgnoreCase(status)){
+                    if (object.has("entities")){
+                        JSONArray entities = object.getJSONArray("entities");
+                        JSONObject jsonObject = entities.getJSONObject(0);
+                        boolean optionValue = jsonObject.getBoolean("optionValue");
+                        Log.e("ppppppppp","optionValue = "+optionValue);
+                        VecConfig.newVecConfig().setShareScreen(optionValue);
+                    }
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            Log.e("VECKitCalling","getSettingShareScreen error = "+e.getMessage());
+        }
+
+    }*/
+
     private void to(String json){
         runOnUiThread(() -> {
             mDialog.dismiss();
@@ -230,10 +276,24 @@ public class VECKitCalling extends Activity {
 
     /**
      * 主动发起视频邀请
-     * @param content 显示的文字
+     * @param content 文本内容
+     * @param vecImServiceNumber im服务号
      */
     public static void callVecVideo(String content, String vecImServiceNumber){
         AgoraMessage.callVecVideo(content, vecImServiceNumber);
+    }
+
+
+    /**
+     * 主动发起视频邀请
+     * @param content 文本内容
+     * @param vecImServiceNumber im服务号
+     * @param sessionId 在线会话id
+     * @param relatedVisitorUserId 访客id
+     * @param relatedImServiceNumber 当前会话的IM服务号
+     */
+    public static void callVecVideo(String content, String vecImServiceNumber, String sessionId, String relatedVisitorUserId, String relatedImServiceNumber){
+        AgoraMessage.callVecVideo(content, vecImServiceNumber, sessionId, relatedVisitorUserId, relatedImServiceNumber);
     }
 
 
@@ -349,4 +409,61 @@ public class VECKitCalling extends Activity {
         }
         return configId;
     }
+
+
+    @SuppressLint("ApplySharedPref")
+    private static void saveGuideSessionId(Context context, String guideSessionId){
+        if (context != null){
+            SharedPreferences sharedPreferences = context.getSharedPreferences("video_style", MODE_PRIVATE);
+            SharedPreferences.Editor edit = sharedPreferences.edit();
+            edit.putString("guide_session_id", guideSessionId);
+            edit.commit();
+        }
+    }
+
+    public static String getGuideSessionId(Context context){
+        if (context != null){
+            SharedPreferences sharedPreferences = context.getSharedPreferences("video_style", MODE_PRIVATE);
+            return sharedPreferences.getString("guide_session_id","");
+        }
+        return "";
+    }
+
+    @SuppressLint("ApplySharedPref")
+    private static void saveGuideImServiceNumber(Context context, String relatedImServiceNumber){
+        if (context != null){
+            SharedPreferences sharedPreferences = context.getSharedPreferences("video_style", MODE_PRIVATE);
+            SharedPreferences.Editor edit = sharedPreferences.edit();
+            edit.putString("guide_imServiceNumber", relatedImServiceNumber);
+            edit.commit();
+        }
+    }
+
+    public static String getGuideImServiceNumber(Context context){
+        if (context != null){
+            SharedPreferences sharedPreferences = context.getSharedPreferences("video_style", MODE_PRIVATE);
+            return sharedPreferences.getString("guide_imServiceNumber","");
+        }
+        return "";
+    }
+
+
+    @SuppressLint("ApplySharedPref")
+    private static void saveGuideVisitorUserId(Context context, String guideSessionId){
+        if (context != null){
+            SharedPreferences sharedPreferences = context.getSharedPreferences("video_style", MODE_PRIVATE);
+            SharedPreferences.Editor edit = sharedPreferences.edit();
+            edit.putString("guide_visitor_user_id", guideSessionId);
+            edit.commit();
+        }
+    }
+
+    public static String getVisitorUserId(Context context){
+        if (context != null){
+            SharedPreferences sharedPreferences = context.getSharedPreferences("video_style", MODE_PRIVATE);
+            return sharedPreferences.getString("guide_visitor_user_id","");
+        }
+        return "";
+    }
+
 }

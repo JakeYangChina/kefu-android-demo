@@ -19,6 +19,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
+import com.easemob.veckit.utils.AppStateVecCallback;
+import com.hyphenate.helpdesk.util.Log;
+
 
 public abstract class BaseActivity extends Activity {
     private Handler mHandler = new Handler(Looper.getMainLooper()){

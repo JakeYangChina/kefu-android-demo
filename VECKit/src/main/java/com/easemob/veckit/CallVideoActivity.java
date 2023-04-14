@@ -1,5 +1,6 @@
 package com.easemob.veckit;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -38,7 +39,8 @@ import com.easemob.veckit.ui.flow.FlowBean;
 import com.easemob.veckit.ui.flow.FlowTagLayout;
 import com.easemob.veckit.utils.AppStateVecCallback;
 import com.easemob.veckit.utils.Utils;
-import com.easemob.veckit.utils.VecKitReportDataUtils;
+import com.easemob.veckit.utils.VecKitReportUtils;
+import com.easemob.veckit.utils.ViewOnClickUtils;
 import com.easemob.veckit.utils.WaitNetworkUtils;
 import com.google.gson.Gson;
 import com.hyphenate.agora.FunctionIconItem;
@@ -51,6 +53,7 @@ import com.hyphenate.helpdesk.easeui.util.FlatFunctionUtils;
 import com.hyphenate.helpdesk.util.Log;
 import com.hyphenate.util.EMLog;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -61,7 +64,7 @@ import java.util.List;
 import java.util.Map;
 
 
-public class CallVideoActivity extends BaseActivity implements View.OnClickListener, IVecEndCallback, RatingBar.OnRatingChangeListener, AppStateVecCallback.IAppStateVecCallback {
+public class CallVideoActivity extends BaseActivity implements ViewOnClickUtils.OnClickListener, IVecEndCallback, RatingBar.OnRatingChangeListener, AppStateVecCallback.IAppStateVecCallback {
     private final static String TAG = CallVideoActivity.class.getSimpleName();
     public final static String DIALOG_TYPE_KEY = "dialog_type_key";
     public final static String LOAD_LOCAL_STYLE = "load_local_style";
@@ -123,7 +126,6 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     private TextView mShowTv;
     private EditText mEtView;
     private boolean mIsRun;
-    private ImageView mPhotoIv;
 
     // 主动
     public static void callingRequest(Context context, String vecImServiceNumber, String jsonStyle) {
@@ -229,7 +231,6 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
 
     @Override
     public void initView(@NonNull Intent intent, @Nullable Bundle savedInstanceState) {
-        Log.e("oooooooooooo","initView");
         AgoraMessage.newAgoraMessage().registerIEndCallback(getClass().getSimpleName(), this);
         AppStateVecCallback.getAppStateCallback().registerIAppStateVecCallback(this);
         mSharedPreferences = getSharedPreferences("video_style", MODE_PRIVATE);
@@ -240,7 +241,7 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         try {
             initEvaluate();
             initPassiveView();
-            initStyle(intent, isActive == VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE);
+            initStyle(intent/*, /*isActive == VideoCallWindowService.INTENT_CALLING_TAG_ACTIVE_VALUE*/);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -280,12 +281,14 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
             getTenantIdFunctionIcons();
             initView();
             dialogType(DIALOG_TYPE_NO);
+            getSettingShareScreen();
         }else {
             // 被动 坐席 --> 访客端 响应
             // 检测是否有悬浮权限
             //passVideo(FloatWindowManager.getInstance().checkPermission(this), intent);
             // activeVideoResponse(FloatWindowManager.getInstance().checkPermission(this), intent);
             killGentAnswerResponse(FloatWindowManager.getInstance().checkPermission(this), intent);
+            getSettingShareScreen();
         }
     }
 
@@ -328,7 +331,6 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         if (dialogType == DIALOG_TYPE_RETRY){
             // 显示满意度
             mCurrentDialogType = DIALOG_TYPE_RETRY;
-            // mEvaluateFlt.setIsAllowClick(false);
             mEvaluateFlt.setIsAllowClick(true);
             initRetry(intent);
             return;
@@ -367,6 +369,7 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
                     dialogType(DIALOG_TYPE_NO);
                 }
             }
+            getSettingShareScreen();
         }
     }
 
@@ -390,7 +393,8 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         mEvaluateTv = $(R.id.evaluateTv);
         mProgressTv = $(R.id.progressTv);
         mOkEvaluateTv = $(R.id.okEvaluateTv);
-        mOkEvaluateTv.setOnClickListener(this);
+        // mOkEvaluateTv.setOnClickListener(this);
+        ViewOnClickUtils.onClick(mOkEvaluateTv, this);
         View evaluateView = $(R.id.evaluateView);
         clipToOutline(evaluateView);
     }
@@ -400,8 +404,10 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         mPassiveLlt = $(R.id.passiveLlt);
         mHangupIv = $(R.id.hangupIv);
         mAcceptIv = $(R.id.acceptIv);
-        mHangupIv.setOnClickListener(this);
-        mAcceptIv.setOnClickListener(this);
+        /*mHangupIv.setOnClickListener(this);
+        mAcceptIv.setOnClickListener(this);*/
+        ViewOnClickUtils.onClick(mHangupIv, this);
+        ViewOnClickUtils.onClick(mAcceptIv, this);
     }
 
     private void request(Callback callback) {
@@ -475,7 +481,7 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     }
 
     // 被动发起视频
-    private void passVideo(boolean checkPermission, Intent intent) {
+    /*private void passVideo(boolean checkPermission, Intent intent) {
         EMLog.e(TAG, "被动 正在通话 座席端 -- 访客端");
 
         if (checkPermission) {
@@ -484,15 +490,15 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         } else {
             CallActivity.show(this, intent);
         }
-
         finishPage();
-    }
+    }*/
 
     private void activeVideo(boolean checkPermission) {
         EMLog.e(TAG, "主动发起请求 是否有悬浮权限 = " + checkPermission);
-        startReport();
         sendCmd();
         startTimerOut();
+        startReport();
+        getSettingShareScreen();
     }
 
     private void activeVideoResponse(boolean isHavPermission, Intent intent) {
@@ -513,7 +519,15 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         mIsRun = true;
         EMLog.e(TAG, "发送请求建立视频 sendCmd");
         String to = AgoraMessage.newAgoraMessage().getVecImServiceNumber();
-        VECKitCalling.callVecVideo(Utils.getString(getApplicationContext(), R.string.vec_agent_to_visitor), to);
+        String guideSessionId = VECKitCalling.getGuideSessionId(this);
+        String visitorUserId = VECKitCalling.getVisitorUserId(this);
+        String imServiceNumber = VECKitCalling.getGuideImServiceNumber(this);
+        Log.e("pppppppppp","aaaaaaaaaa imServiceNumber = "+imServiceNumber);
+        if (TextUtils.isEmpty(guideSessionId)){
+            VECKitCalling.callVecVideo(Utils.getString(getApplicationContext(), R.string.vec_agent_to_visitor), to);
+        }else {
+            VECKitCalling.callVecVideo(Utils.getString(getApplicationContext(), R.string.vec_agent_to_visitor), to, guideSessionId, visitorUserId, imServiceNumber);
+        }
     }
 
     private Runnable mCloseTimerOut;
@@ -557,24 +571,21 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
                 // 排队等待时，挂断：分两种情况，1.正在排队挂断。2.待接入时，挂断
                 mIsCreate = false;
                 mIsRun = false;
-                VECKitCalling.endCallFromOff();
-                Log.e("yyyyyyyyyyyy","DIALOG_TYPE_WAIT");
                 stopReport();
+                VECKitCalling.endCallFromOff();
                 dialogType(DIALOG_TYPE_END);
             } else if (DIALOG_TYPE_WAIT == mCurrentDialogType) {
                 // 排队等待时，挂断：分两种情况，1.正在排队挂断。2.待接入时，挂断
                 mIsCreate = false;
                 mIsRun = false;
-                VECKitCalling.endCallFromOff();
-                Log.e("yyyyyyyyyyyy","DIALOG_TYPE_WAIT");
                 stopReport();
+                VECKitCalling.endCallFromOff();
                 dialogType(DIALOG_TYPE_END);
 
             } else if (DIALOG_TYPE_SEND == mCurrentDialogType) {
                 // 挂断
-                VECKitCalling.endCallFromOff();
                 stopReport();
-                Log.e("yyyyyyyyyyyy","DIALOG_TYPE_SEND");
+                VECKitCalling.endCallFromOff();
                 mIsCreate = false;
                 mIsRun = false;
                 dialogType(DIALOG_TYPE_END);
@@ -820,7 +831,7 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         }
     }
 
-    private void initStyle(@NonNull Intent intent, boolean isActive) throws JSONException {
+    private void initStyle(@NonNull Intent intent/*, boolean isActive*/) throws JSONException {
         // 背景视图倒角
         /*if (isActive) {
             mWaitingIV = $(R.id.waitingIV);
@@ -898,21 +909,24 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
 
 
     private void initView() {
-        mPhotoIv = $(R.id.photoIv);
+        ImageView photoIv = $(R.id.photoIv);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            clip(mPhotoIv, 50);
+            clip(photoIv, 50);
         }
         // 头像
-        mPhotoIv.setBackgroundResource(R.drawable.wait_icon);
-        loadAvatarImage(mPhotoIv, getCacheDir().toString(), VecConfig.newVecConfig().getAvatarImage());
+        photoIv.setBackgroundResource(R.drawable.wait_icon);
+        loadAvatarImage(photoIv, getCacheDir().toString(), VecConfig.newVecConfig().getAvatarImage());
 
         mCloseTv = $(R.id.closeTv);
         mNameTv = $(R.id.nameTv);
         mContentTv = $(R.id.contentTv);
         mTypeIv = $(R.id.typeIv);
         mTypeTv = $(R.id.typeTv);
-        mCloseTv.setOnClickListener(this);
-        mTypeIv.setOnClickListener(this);
+        /*mCloseTv.setOnClickListener(this);
+        mTypeIv.setOnClickListener(this);*/
+
+        ViewOnClickUtils.onClick(mCloseTv, this);
+        ViewOnClickUtils.onClick(mTypeIv, this);
 
         mContent = getWindow().getDecorView().findViewById(android.R.id.content);
         mWm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
@@ -1012,7 +1026,6 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     }
 
     private void finishPage() {
-
         postDelayed(() -> {
             clear();
             finish();
@@ -1023,11 +1036,11 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
     private void clear() {
         WaitNetworkUtils.newWaitNetworkUtils().clear();
         AppStateVecCallback.getAppStateCallback().unRegisterIAppStateVecCallback(this);
-        VecKitReportDataUtils.getVecKitReportDataUtils().destroy();
         stopTimerOut();
         Utils.clearDegreeTag(mDegreeBeanMap);
         AgoraMessage.newAgoraMessage().unRegisterIEndCallback(getClass().getSimpleName());
         if (mRatingBar != null){
+            // mRatingBar.setOnRatingBarChangeListener(null);
             mRatingBar.setOnRatingChangeListener(null);
         }
 
@@ -1035,6 +1048,13 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
             mEnquiryOptionsBean.enquiryOptions.clear();
             mEnquiryOptionsBean = null;
         }
+
+        ViewOnClickUtils.onClickDestroy(mCloseTv);
+        ViewOnClickUtils.onClickDestroy(mTypeIv);
+        ViewOnClickUtils.onClickDestroy(mHangupIv);
+        ViewOnClickUtils.onClickDestroy(mAcceptIv);
+        ViewOnClickUtils.onClickDestroy(mOkEvaluateTv);
+
         removeHandlerAll();
         mToChatUserName = null;
         mIsCreate = false;
@@ -1044,8 +1064,6 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
 
     @Override
     public void onVecZuoXiToBreakOff() {
-        stopReport();
-        Log.e("yyyyyyyyyyyy","onVecZuoXiToBreakOff");
         finishPage();
     }
 
@@ -1086,7 +1104,7 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
         });
     }
 
-    private Map<Integer, ArrayList<FlowBean>> mDegreeBeanMap = new HashMap<>();
+    private final Map<Integer, ArrayList<FlowBean>> mDegreeBeanMap = new HashMap<>();
     private EnquiryOptionsBean mEnquiryOptionsBean;
     // 默认是否开启备注必填
     private boolean mIsEnquiryCommentEnable;
@@ -1294,21 +1312,58 @@ public class CallVideoActivity extends BaseActivity implements View.OnClickListe
 
     @Override
     public void onAppForeground() {
-        VecKitReportDataUtils.getVecKitReportDataUtils().onPageForegroundReport();
+        VecKitReportUtils.getVecKitReportUtils().onPageForegroundReport();
     }
 
     @Override
     public void onAppBackground() {
-        VecKitReportDataUtils.getVecKitReportDataUtils().onPageBackgroundReport();
+        VecKitReportUtils.getVecKitReportUtils().onPageBackgroundReport();
+    }
+
+    @Override
+    public void onActivityStopped(Activity activity) {
+
     }
 
     private void stopReport(){
-        Log.e("yyyyyyyyyyyy","stopReport");
-        VecKitReportDataUtils.getVecKitReportDataUtils().stopReport();
+        VecKitReportUtils.getVecKitReportUtils().closeReport();
     }
 
     private void startReport(){
-        Log.e("yyyyyyyyyyyy","startReport");
-        VecKitReportDataUtils.getVecKitReportDataUtils().startReport();
+        VecKitReportUtils.getVecKitReportUtils().startReport(mToChatUserName);
     }
+
+
+    private void getSettingShareScreen() {
+        ChatClient.getInstance().chatManager().asyncGetSettingShareScreen(ChatClient.getInstance().tenantId(), new ValueCallBack<String>() {
+            @Override
+            public void onSuccess(String value) {
+                Log.e(TAG,"getSettingShareScreen = "+value);
+                try {
+                    JSONObject object = new JSONObject(value);
+                    if (object.has("status")){
+                        String status = object.getString("status");
+                        if ("OK".equalsIgnoreCase(status)){
+                            if (object.has("entities")){
+                                JSONArray entities = object.getJSONArray("entities");
+                                JSONObject jsonObject = entities.getJSONObject(0);
+                                boolean optionValue = jsonObject.getBoolean("optionValue");
+                                Log.e("ppppppppp","optionValue = "+optionValue);
+                                VecConfig.newVecConfig().setShareScreen(optionValue);
+                            }
+                        }
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
+                    Log.e("VECKitCalling","getSettingShareScreen error = "+e.getMessage());
+                }
+            }
+
+            @Override
+            public void onError(int error, String errorMsg) {
+                Log.e(TAG,"getSettingShareScreen error = "+errorMsg);
+            }
+        });
+    }
+
 }

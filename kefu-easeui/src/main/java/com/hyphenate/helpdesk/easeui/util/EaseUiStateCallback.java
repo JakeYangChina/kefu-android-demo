@@ -1,4 +1,4 @@
-package com.hyphenate.helpdesk.videokit.uitls;
+package com.hyphenate.helpdesk.easeui.util;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -12,27 +12,30 @@ import java.util.List;
 import java.util.Map;
 
 
-public class AppStateCecCallback implements Application.ActivityLifecycleCallbacks {
-    private volatile static AppStateCecCallback APP_STATE_CALLBACK;
-    private Map<String, Integer> mActivityMap = new HashMap<>();
-    private List<IAppStateCecCallback> mIAppStateCecCallbacks = new ArrayList<>();
+public class EaseUiStateCallback implements Application.ActivityLifecycleCallbacks {
+    private volatile static EaseUiStateCallback APP_STATE_CALLBACK;
+    private final Map<String, Integer> mActivityMap = new HashMap<>();
+    private final List<IEaseUiStateCallback> mIEaseUiStateCallbacks = new ArrayList<>();
     private volatile boolean mIsBackground;
+    private EaseUiStateCallback(){}
+
+
     public static void init(Application context){
         if (APP_STATE_CALLBACK == null){
-            synchronized (AppStateCecCallback.class){
+            synchronized (EaseUiStateCallback.class){
                 if (APP_STATE_CALLBACK == null){
-                    APP_STATE_CALLBACK = new AppStateCecCallback(context);
+                    APP_STATE_CALLBACK = new EaseUiStateCallback(context);
                 }
             }
         }
     }
 
-    public static AppStateCecCallback getAppStateCallback() {
+    public static EaseUiStateCallback getEaseUiStateCallback() {
         return APP_STATE_CALLBACK;
     }
 
     @SuppressLint("ObsoleteSdkInt")
-    private AppStateCecCallback(Application context){
+    private EaseUiStateCallback(Application context){
         // isSdk14
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH){
             context.registerActivityLifecycleCallbacks(this);
@@ -49,9 +52,9 @@ public class AppStateCecCallback implements Application.ActivityLifecycleCallbac
         mActivityMap.put(activity.getClass().getName(), 1);
         if(mActivityMap.size() == 1) {
             mIsBackground = false;
-            if (mIAppStateCecCallbacks != null){
-                for (IAppStateCecCallback iAppStateCecCallback : mIAppStateCecCallbacks){
-                    iAppStateCecCallback.onAppForeground();
+            if (mIEaseUiStateCallbacks != null){
+                for (IEaseUiStateCallback iEaseUiStateCallback : mIEaseUiStateCallbacks){
+                    iEaseUiStateCallback.onAppForeground();
                 }
             }
         }
@@ -70,19 +73,12 @@ public class AppStateCecCallback implements Application.ActivityLifecycleCallbac
 
     @Override
     public void onActivityStopped(Activity activity) {
-
-        if (mIAppStateCecCallbacks != null){
-            for (IAppStateCecCallback iAppStateVecCallback : mIAppStateCecCallbacks){
-                iAppStateVecCallback.onActivityStopped(activity);
-            }
-        }
-
         mActivityMap.remove(activity.getClass().getName());
         if (mActivityMap.isEmpty()) {
             mIsBackground = true;
-            if (mIAppStateCecCallbacks != null){
-                for (IAppStateCecCallback iAppStateCecCallback : mIAppStateCecCallbacks){
-                    iAppStateCecCallback.onAppBackground();
+            if (mIEaseUiStateCallbacks != null){
+                for (IEaseUiStateCallback iEaseUiStateCallback : mIEaseUiStateCallbacks){
+                    iEaseUiStateCallback.onAppBackground();
                 }
             }
 
@@ -99,15 +95,15 @@ public class AppStateCecCallback implements Application.ActivityLifecycleCallbac
 
     }
 
-    public void registerIAppStateCecCallback(IAppStateCecCallback callback){
-        synchronized (AppStateCecCallback.class){
-            mIAppStateCecCallbacks.add(callback);
+    public void registerIAppStateEaseUiCallback(IEaseUiStateCallback callback){
+        synchronized (EaseUiStateCallback.class){
+            mIEaseUiStateCallbacks.add(callback);
         }
     }
 
-    public void unRegisterIAppStateCecCallback(IAppStateCecCallback callback){
-        synchronized (AppStateCecCallback.class){
-            mIAppStateCecCallbacks.remove(callback);
+    public void unRegisterIAppStateEaseUiCallback(IEaseUiStateCallback callback){
+        synchronized (EaseUiStateCallback.class){
+            mIEaseUiStateCallbacks.remove(callback);
         }
     }
 
@@ -116,10 +112,9 @@ public class AppStateCecCallback implements Application.ActivityLifecycleCallbac
         return mIsBackground;
     }
 
-    public interface IAppStateCecCallback {
+    public interface IEaseUiStateCallback {
         void onAppForeground();
         void onAppBackground();
-        void onActivityStopped(Activity activity);
     }
 
 }

@@ -3,6 +3,7 @@ package com.hyphenate.helpdesk.videokit.ui;
 import android.content.Context;
 import android.content.Intent;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.hyphenate.agora.FunctionIconItem;
 import com.hyphenate.chat.AgoraMessage;
@@ -31,6 +32,22 @@ public class Calling {
         }
     }
 
+    /**
+     * 点击训前引导页面条目 发起视频
+     * @param context 上下文
+     * @param serviceNumber im服务号
+     */
+    public static void callingRequestFromClickGuideMenu(Context context, String serviceNumber){
+        if (TextUtils.isEmpty(serviceNumber)) {
+            throw new RuntimeException("serviceNumber is null.");
+        }
+
+        if (FloatWindowManager.getInstance().checkPermission(context)){
+            VideoCallWindowService.show(context, serviceNumber);
+        }else {
+            CallActivity.show(context, serviceNumber);
+        }
+    }
 
     // 被动
     public static void callingResponse(Context context, Intent intent){

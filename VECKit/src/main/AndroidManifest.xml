@@ -40,6 +40,9 @@
             android:screenOrientation="portrait"
             android:theme="@style/default_style"/>
 
+        <activity android:name=".BlankSpaceActivity"
+            android:theme="@style/translucent_style_vec" />
+
         <service android:name=".VideoCallWindowService" />
     </application>
 </manifest>

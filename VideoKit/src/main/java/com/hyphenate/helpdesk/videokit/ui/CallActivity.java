@@ -1,5 +1,6 @@
 package com.hyphenate.helpdesk.videokit.ui;
 
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -27,6 +28,7 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.TextureView;
 import android.view.View;
@@ -74,9 +76,11 @@ import com.hyphenate.helpdesk.videokit.ui.views.FixHeightFrameLayout;
 import com.hyphenate.helpdesk.videokit.ui.views.IconTextView;
 import com.hyphenate.helpdesk.videokit.ui.views.MyChronometer;
 import com.hyphenate.helpdesk.videokit.ui.views.VideoItemContainerView;
+import com.hyphenate.helpdesk.videokit.uitls.AppStateCecCallback;
 import com.hyphenate.helpdesk.videokit.uitls.Utils;
 import com.hyphenate.helpdesk.videokit.uitls.ViewOnClickUtils;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -109,7 +113,7 @@ import io.agora.rtc2.video.VideoEncoderConfiguration;
  */
 
 public class CallActivity extends FragmentActivity implements ICecMessageNotify, VideoItemContainerView.OnVideoIconViewClickListener,
-        FixHeightFrameLayout.ICloseFlatCallback {
+        FixHeightFrameLayout.ICloseFlatCallback, AppStateCecCallback.IAppStateCecCallback {
 
     private static final String TAG = CallActivity.class.getSimpleName();
     private final int MSG_CALL_ANSWER = 2;
@@ -182,7 +186,6 @@ public class CallActivity extends FragmentActivity implements ICecMessageNotify,
 
     // 主动发起呼叫
     public static void show(Context context, String cecImServiceNumber){
-        VecConfig.newVecConfig().setVecVideo(false);
         AgoraMessage.newAgoraMessage().setCecImServiceNumber(cecImServiceNumber);
         Intent intent = new Intent(context.getApplicationContext(), CallActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -234,7 +237,7 @@ public class CallActivity extends FragmentActivity implements ICecMessageNotify,
                 | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
 
         Intent intent = getIntent();
-
+        getSettingShareScreen();
         // 默认被动呼叫
         int active = intent.getIntExtra(INTENT_CALLING_TAG, INTENT_CALLING_TAG_PASSIVE_VALUE);
         mIsActive = active == INTENT_CALLING_TAG_ACTIVE_VALUE;
@@ -261,6 +264,7 @@ public class CallActivity extends FragmentActivity implements ICecMessageNotify,
         showAndHidden(mActiveBottomContainer, mIsActive);
 
         AgoraMessage.newAgoraMessage().registerCecMessageNotify(getClass().getSimpleName(), this);
+        AppStateCecCallback.getAppStateCallback().registerIAppStateCecCallback(this);
         if (mIsActive){
             findViewById(R.id.active_call_hangup).setOnClickListener(v -> {
                 Log.e("yyyyyyyyy","onClick");
@@ -971,6 +975,7 @@ public class CallActivity extends FragmentActivity implements ICecMessageNotify,
         }
         if (!isSharing) {
             isSharing = true;
+            mIsStartShareToBackground = VecConfig.newVecConfig().isSettingShareScreen();
             /*ScreenCaptureParameters screenCaptureParameters = new ScreenCaptureParameters();
             //screenCaptureParameters.captureAudio = true;
             screenCaptureParameters.captureVideo = true;
@@ -1780,6 +1785,15 @@ public class CallActivity extends FragmentActivity implements ICecMessageNotify,
         }
     }
 
+    /*@Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            moveTaskToBack(true);
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }*/
+
 
     private void openSpeakerOn() {
         try {
@@ -1889,6 +1903,7 @@ public class CallActivity extends FragmentActivity implements ICecMessageNotify,
         mPopupWindow = null;
         mUids.clear();
         AgoraMessage.newAgoraMessage().unRegisterCecMessageNotify(getClass().getSimpleName());
+        AppStateCecCallback.getAppStateCallback().unRegisterIAppStateCecCallback(this);
         mIsClick = false;
         sendIsOnLineState(false);
         if (mRingtone != null && mRingtone.isPlaying()) {
@@ -2585,6 +2600,76 @@ public class CallActivity extends FragmentActivity implements ICecMessageNotify,
             }
         }
         return false;
+    }
+
+
+    // app进入后台，是否允许分享画面 true允许
+    private boolean mIsStartShareToBackground = false;
+
+    @Override
+    public void onAppForeground() {
+        if (isSharing && !mIsStartShareToBackground){
+            if (mAgoraRtcEngine != null && mAgoraRtcEngine.isOpenScreenCapturePaused()){
+                screenCaptureResumed();
+                mAgoraRtcEngine.screenCaptureResumed();
+            }
+        }
+    }
+
+    @Override
+    public void onAppBackground() {
+        if (isSharing && !mIsStartShareToBackground){
+            if (mAgoraRtcEngine != null && !mAgoraRtcEngine.isOpenScreenCapturePaused()){
+                screenCapturePaused();
+                mAgoraRtcEngine.screenCapturePaused();
+            }
+        }
+    }
+
+    @Override
+    public void onActivityStopped(Activity activity) {
+
+    }
+
+    private void screenCapturePaused(){
+
+    }
+
+    private void screenCaptureResumed(){
+
+    }
+
+
+    private void getSettingShareScreen() {
+        ChatClient.getInstance().chatManager().asyncGetSettingShareScreen(ChatClient.getInstance().tenantId(), new ValueCallBack<String>() {
+            @Override
+            public void onSuccess(String value) {
+                com.hyphenate.helpdesk.util.Log.e(TAG,"getSettingShareScreen = "+value);
+                try {
+                    JSONObject object = new JSONObject(value);
+                    if (object.has("status")){
+                        String status = object.getString("status");
+                        if ("OK".equalsIgnoreCase(status)){
+                            if (object.has("entities")){
+                                JSONArray entities = object.getJSONArray("entities");
+                                JSONObject jsonObject = entities.getJSONObject(0);
+                                boolean optionValue = jsonObject.getBoolean("optionValue");
+                                com.hyphenate.helpdesk.util.Log.e("ppppppppp","optionValue = "+optionValue);
+                                VecConfig.newVecConfig().setShareScreen(optionValue);
+                            }
+                        }
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
+                    com.hyphenate.helpdesk.util.Log.e("VECKitCalling","getSettingShareScreen error = "+e.getMessage());
+                }
+            }
+
+            @Override
+            public void onError(int error, String errorMsg) {
+                com.hyphenate.helpdesk.util.Log.e(TAG,"getSettingShareScreen error = "+errorMsg);
+            }
+        });
     }
 
 }

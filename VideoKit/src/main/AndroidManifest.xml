@@ -19,6 +19,9 @@
             android:screenOrientation="portrait"
             android:theme="@style/ligtht_default_style"/>
 
+        <activity android:name=".ui.CecBlankSpaceActivity"
+            android:theme="@style/translucent_style_vec" />
+
         <service android:name=".ui.VideoCallWindowService" />
     </application>
 

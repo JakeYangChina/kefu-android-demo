@@ -19,6 +19,7 @@ import com.hyphenate.helpdesk.model.ContentFactory;
 import com.hyphenate.helpdesk.model.MessageHelper;
 import com.hyphenate.helpdesk.model.RobotMenuInfo;
 import com.hyphenate.helpdesk.model.TransferGuideMenuInfo;
+import com.hyphenate.helpdesk.util.Log;
 import com.hyphenate.util.DensityUtil;
 import com.hyphenate.util.EMLog;
 
@@ -54,21 +55,6 @@ public class ChatRowTransferGuideMenu extends ChatRow {
     protected void onUpdateView() {
 
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
      @Override
@@ -135,40 +121,9 @@ public class ChatRowTransferGuideMenu extends ChatRow {
                                     ChatClient.getInstance().chatManager().sendMessage(sendMessage);
                                 }*/
 
-
                                 Message sendMessage = Message.createSendMessageForMenu(item, message.from());
                                 if (sendMessage != null) {
-                                    /*if (item.getQueueType().equalsIgnoreCase("video")
-                                                || item.getQueueType().equalsIgnoreCase("txt")){
-                                            ChatClient.getInstance().chatManager().sendMessage(sendMessage, new Callback() {
-                                                @Override
-                                                public void onSuccess() {
-                                                    // TODO 点击机器人菜单条目，修改后代码
-                                                    // clickSendMessage(item);
-                                                    if (!item.getQueueType().equals("txt")) {
-                                                        onClickTransferGuideMenuItem(item);
-                                                    }
-                                                }
-
-                                                @Override
-                                                public void onError(int code, String error) {
-                                                    // TODO 点击机器人菜单条目，修改后代码
-                                                    // clickSendMessage(item);
-                                                    if (!item.getQueueType().equals("txt")) {
-                                                        onClickTransferGuideMenuItem(item);
-                                                    }
-                                                }
-
-                                                @Override
-                                                public void onProgress(int progress, String status) {
-
-                                                }
-                                            });
-                                        }else {
-                                            onClickTransferGuideMenuItem(item);
-                                        }*/
-
-                                    if (item.getQueueType().equalsIgnoreCase("txt")){
+                                    if (item.getQueueType().equalsIgnoreCase("video")){
                                         ChatClient.getInstance().chatManager().sendMessage(sendMessage, new Callback() {
                                             @Override
                                             public void onSuccess() {
@@ -179,7 +134,6 @@ public class ChatRowTransferGuideMenu extends ChatRow {
                                             @Override
                                             public void onError(int code, String error) {
                                                 // TODO 点击机器人菜单条目，修改后代码
-                                                // clickSendMessage(item);
                                                 onClickTransferGuideMenuItem(item);
                                             }
 
@@ -188,8 +142,10 @@ public class ChatRowTransferGuideMenu extends ChatRow {
 
                                             }
                                         });
-                                    }else {
+                                    }else if (item.getQueueType().equalsIgnoreCase("independentVideo")){
                                         onClickTransferGuideMenuItem(item);
+                                    }else {
+                                        ChatClient.getInstance().chatManager().sendMessage(sendMessage);
                                     }
                                 }
                             }
@@ -234,16 +190,72 @@ public class ChatRowTransferGuideMenu extends ChatRow {
             mClickTransferGuideMenuItem.onClickGuideMenuItemCallVideo(item);
         }
 
+        String sessionId = "";
+        try {
+            sessionId = ChatClient.getInstance().chatManager().getSessionIdFromMessage(message);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
         // 发广播
         try {
+
+            String vecImServiceNumber = getVecImServiceNumber(item);
+            String configId = getConfigId(item);
+            String cecImServiceNumber = message.from();
+
             Gson gson = new Gson();
             String json = gson.toJson(item);
             Intent intent = new Intent("guide.menu.item.action");
             intent.putExtra("data",json);
+            intent.putExtra("vecImServiceNumber",vecImServiceNumber);
+            intent.putExtra("configId",configId);
+            intent.putExtra("cecImServiceNumber",cecImServiceNumber);
+            intent.putExtra("sessionId",sessionId);
             mContext.getApplicationContext().sendBroadcast(intent);
         }catch (Exception e){
             e.printStackTrace();
         }
+    }
+
+    private String getVecImServiceNumber(TransferGuideMenuInfo.Item item){
+        try {
+            /*Log.e("qqqqqqqqqqqq","item = "+item.getJsonObj());
+            JSONObject msgtype = message.getJSONObjectAttribute("msgtype");
+            Log.e("qqqqqqqqqqqq","msgtype = "+msgtype);*/
+
+            JSONObject jsonObj = item.getJsonObj();
+            if (jsonObj.has("pluginConfig")){
+                JSONObject pluginConfig = jsonObj.getJSONObject("pluginConfig");
+                if (pluginConfig.has("appConfig")){
+                    JSONObject appConfig = pluginConfig.getJSONObject("appConfig");
+                    JSONObject configJson = appConfig.getJSONObject("configJson");
+                    JSONObject channel = configJson.getJSONObject("channel");
+                    return channel.getString("to");
+                }
+            }
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+    private String getConfigId(TransferGuideMenuInfo.Item item){
+        try {
+            JSONObject jsonObj = item.getJsonObj();
+            if (jsonObj.has("pluginConfig")){
+                JSONObject pluginConfig = jsonObj.getJSONObject("pluginConfig");
+                if (pluginConfig.has("appConfig")){
+                    JSONObject appConfig = pluginConfig.getJSONObject("appConfig");
+                    return appConfig.getString("configId");
+                }
+            }
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return "";
     }
 
     private OnClickTransferGuideMenuItemCallVideo mClickTransferGuideMenuItem;
@@ -251,6 +263,6 @@ public class ChatRowTransferGuideMenu extends ChatRow {
         this.mClickTransferGuideMenuItem = item;
     }
     public interface OnClickTransferGuideMenuItemCallVideo {
-        void onClickGuideMenuItemCallVideo(TransferGuideMenuInfo.Item item);
+        void onClickGuideMenuItemCallVideo(TransferGuideMenuInfo.Item item/*, String vecImServiceNumber, String configId, String cecImServiceNumber*/);
     }
 }

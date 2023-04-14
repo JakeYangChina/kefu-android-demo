@@ -14,15 +14,20 @@
 package com.easemob.helpdeskdemo.ui;
 
 import android.annotation.TargetApi;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.graphics.Point;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.os.PowerManager;
+import android.os.RemoteException;
 import android.provider.Settings;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Display;
 import android.view.KeyEvent;
 import android.view.View;
@@ -32,7 +37,6 @@ import android.view.WindowManager;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
-import com.hyphenate.cloud.HttpClientManager;
 import com.hyphenate.helpdesk.Error;
 import com.easemob.bottomnavigation.BottomNavigation;
 import com.easemob.bottomnavigation.OnBottomNavigationSelectedListener;
@@ -121,7 +125,6 @@ public class MainActivity extends DemoBaseActivity implements OnBottomNavigation
         setContentView(R.layout.em_activity_main);
         String customerAccount = Preferences.getInstance().getCustomerAccount();
 
-
         if (!TextUtils.isEmpty(customerAccount)){
             AgoraMessage.newAgoraMessage().setVecImServiceNumber(customerAccount);
             AgoraMessage.newAgoraMessage().setCecImServiceNumber(customerAccount);
@@ -186,6 +189,36 @@ public class MainActivity extends DemoBaseActivity implements OnBottomNavigation
         // 给新版vec呼叫页面设置用户名称
         VecConfig.newVecConfig().setUserName(Preferences.getInstance().getNickName());
 
+
+        /*IBinder.DeathRecipient deathRecipient = new IBinder.DeathRecipient() {
+            @Override
+            public void binderDied() {
+                Log.e("ooooooooooooooo","binderDied");
+            }
+        };
+
+
+        ServiceConnection connection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+                try {
+                    //注册死亡回调
+                    service.linkToDeath(deathRecipient,0);
+                    Log.e("ooooooooooooooo","onServiceConnected");
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                    Log.e("ooooooooooooooo","error = "+e.getMessage());
+                }
+
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                Log.e("ooooooooooooooo","onServiceDisconnected");
+            }
+        };
+        Intent intent = new Intent(this, TestService.class);
+        bindService(intent, connection, Context.BIND_AUTO_CREATE);*/
 
     }
 
@@ -312,10 +345,6 @@ public class MainActivity extends DemoBaseActivity implements OnBottomNavigation
         DemoHelper.getInstance().pushActivity(this);
         ChatClient.getInstance().chatManager().addMessageListener(messageListener);
         DemoHelper.getInstance().showNotificationPermissionDialog();
-
-
-        ChatClient.getInstance().changeConfigId("e123544e-1f36-4ca0-a666-135bb2f04466");
-        AgoraMessage.newAgoraMessage().setVecImServiceNumber("kefuchannelimid_392654");
     }
 
     @Override

@@ -17,6 +17,8 @@ public class AppStateVecCallback implements Application.ActivityLifecycleCallbac
     private Map<String, Integer> mActivityMap = new HashMap<>();
     private List<IAppStateVecCallback> mIAppStateVecCallbacks = new ArrayList<>();
     private volatile boolean mIsBackground;
+    private AppStateVecCallback(){}
+
     public static void init(Application context){
         if (APP_STATE_CALLBACK == null){
             synchronized (AppStateVecCallback.class){
@@ -70,6 +72,13 @@ public class AppStateVecCallback implements Application.ActivityLifecycleCallbac
 
     @Override
     public void onActivityStopped(Activity activity) {
+
+        if (mIAppStateVecCallbacks != null){
+            for (IAppStateVecCallback iAppStateVecCallback : mIAppStateVecCallbacks){
+                iAppStateVecCallback.onActivityStopped(activity);
+            }
+        }
+
         mActivityMap.remove(activity.getClass().getName());
         if (mActivityMap.isEmpty()) {
             mIsBackground = true;
@@ -78,7 +87,6 @@ public class AppStateVecCallback implements Application.ActivityLifecycleCallbac
                     iAppStateVecCallback.onAppBackground();
                 }
             }
-
         }
     }
 
@@ -112,6 +120,7 @@ public class AppStateVecCallback implements Application.ActivityLifecycleCallbac
     public interface IAppStateVecCallback {
         void onAppForeground();
         void onAppBackground();
+        void onActivityStopped(Activity activity);
     }
 
 }

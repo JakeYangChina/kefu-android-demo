@@ -1,5 +1,6 @@
 package com.easemob.veckit;
 
+import android.app.Activity;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -19,7 +20,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Parcelable;
 import android.os.SystemClock;
-import android.os.strictmode.WebViewMethodCalledOnWrongThreadViolation;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -50,6 +50,7 @@ import com.easemob.veckit.help.PushMessageLink;
 import com.easemob.veckit.signature.SignatureView;
 import com.easemob.veckit.ui.SignatureTextView;
 import com.easemob.veckit.utils.AppStateVecCallback;
+import com.easemob.veckit.utils.BlankSpaceUtils;
 import com.easemob.veckit.utils.CommonUtils;
 import com.easemob.veckit.utils.Utils;
 import com.easemob.veckit.board.ConversionInfo;
@@ -69,6 +70,8 @@ import com.easemob.veckit.ui.MyChronometer;
 import com.easemob.veckit.ui.VideoItemContainerView;
 import com.easemob.veckit.utils.CloudCallbackUtils;
 import com.easemob.veckit.utils.VecChatViewUtils;
+import com.easemob.veckit.utils.VecKitReportUtils;
+import com.easemob.veckit.utils.ViewOnClickUtils;
 import com.herewhite.sdk.RoomParams;
 import com.herewhite.sdk.domain.WindowAppParam;
 import com.herewhite.sdk.domain.WindowParams;
@@ -460,17 +463,23 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
 
     private boolean mIsFirstAdd;
 
+    View viewById;
     private void initVideo(View view, Intent intent) {
         // 全屏 -- 半屏
         mDrawAndDrawIcon = view.findViewById(R.id.drawAndDrawIcon);
-        view.findViewById(R.id.drawAndDrawIcon).setOnClickListener(new View.OnClickListener() {
+        viewById = view.findViewById(R.id.drawAndDrawIcon);
+        ViewOnClickUtils.onClick(viewById, new ViewOnClickUtils.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String tag = (String) v.getTag();
                 if ("1".equals(tag)) {
-                    // 点击变成固定高度
+                    // 点击变成固定高度。半屏
                     v.setTag("0");
                     mIsStartHalf = true;
+
+                    // TODO
+                    notifyBlankSpaceActivityFinish();
+
                     mCurrentHeight = mFitHeight;
                     mDrawAndDrawIcon.setText("\ue61c");
                     if (mIsStartBoard) {
@@ -488,7 +497,12 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
                     updateHeight(mFitHeight);
 
                 } else {
+                    // 全屏
                     v.setTag("1");
+
+                    // TODO
+                    BlankSpaceActivity.startBlankSpaceActivity(getApplicationContext());
+
                     mIsStartHalf = false;
                     mCurrentHeight = mHeight;
                     mDrawAndDrawIcon.setText("\ue7c6");
@@ -510,7 +524,6 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
                         showAndHidden(mMembersContainer, true);
                     }
                 }
-
             }
         });
 
@@ -523,6 +536,9 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
             @Override
             public void onClick(View v) {
                 // 显示悬浮按钮
+                Log.e("ppppppppppppp","点击最小按钮");
+
+                notifyBlankSpaceActivityFinish();
                 floatViewShow();
                 showFloatView();
             }
@@ -531,6 +547,8 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         mFloatView.setOnAVCallFloatViewCallback(new AVCallFloatView.OnAVCallFloatViewCallback() {
             @Override
             public void onClick() {
+                Log.e("ppppppppppppp","点击显示视图");
+                showFullView();
                 floatViewHidden();
                 showView();
             }
@@ -573,7 +591,19 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         switchBottomItem();
 
         // 接通
-        ivAccept.setOnClickListener(new View.OnClickListener() {
+        /*ivAccept.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mBottomContainer.setVisibility(View.GONE);
+                mBottomContainerView.setVisibility(View.VISIBLE);
+                mIsClick = true;
+                sendIsOnLineState(true);
+                mHandler.sendEmptyMessage(MSG_CALL_ANSWER);
+            }
+        });*/
+
+        // 接通
+        ViewOnClickUtils.onClick(ivAccept, new ViewOnClickUtils.OnClickListener() {
             @Override
             public void onClick(View v) {
                 mBottomContainer.setVisibility(View.GONE);
@@ -585,9 +615,19 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         });
 
         // 挂断
-        ivHangup.setOnClickListener(v -> {
+        /*ivHangup.setOnClickListener(v -> {
             mIsClick = true;
             mHandler.sendEmptyMessage(MSG_CALL_END);
+        });*/
+
+        // 挂断
+        ViewOnClickUtils.onClick(ivHangup, new ViewOnClickUtils.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mIsClick = true;
+                // VecKitReportUtils.getVecKitReportUtils().closeReport();
+                mHandler.sendEmptyMessage(MSG_CALL_END);
+            }
         });
 
 
@@ -730,7 +770,6 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    Log.e("uuuuuuuuuuuuu","开启 uid = "+uid);
                                     mVideoDisables.remove(uid);
                                     updateCamera(uid, true);
                                 }
@@ -809,6 +848,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
                 | WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR
                 | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
                 | WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN;
+
 
         // 设置软键盘显示的模式
         mLayoutParams.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
@@ -988,6 +1028,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         notifyTitleTips();
         if (mUids.size() < 1) {
             // 关闭页面
+            // VecKitReportUtils.getVecKitReportUtils().closeReport();
             mHandler.sendEmptyMessage(MSG_CALL_END);
             Log.e(TAG, "用户离开房间 关闭页面 mUids.size() = "+mUids.size());
         }
@@ -1299,6 +1340,8 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         // 执行屏幕共享进程，将 App ID，channel ID 等信息发送给屏幕共享进程
         if (!isSharing) {
             isSharing = true;
+            mIsClickShare = true;
+            mIsStartShareToBackground = VecConfig.newVecConfig().isSettingShareScreen();
             mAgoraRtcEngine.startScreenCapture();
             if (mVecChatViewUtils != null) {
                 if (mVecChatViewUtils.isNewStyle()) {
@@ -1312,6 +1355,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
             }
         } else {
             isSharing = false;
+            mIsClickShare = false;
             mAgoraRtcEngine.stopScreenCapture();
             if (mVecChatViewUtils != null) {
                 if (mVecChatViewUtils.isNewStyle()) {
@@ -1868,6 +1912,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
                             /*if (mSSClient != null) {
                                 mSSClient.stop(getApplication());
                             }*/
+
                             // 释放屏幕分享
                             if (mAgoraRtcEngine != null) {
                                 if (isSharing) {
@@ -1889,11 +1934,13 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
                                     if (mIsRetry) {
                                         CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);
                                     }*/
+                                    //VecKitReportUtils.getVecKitReportUtils().closeReport();
                                     mHandler.sendEmptyMessage(MSG_CLEAR);
                                 }
 
                             } else {
                                 //ChatClient.getInstance().callManager().endVecCall(0, true);
+                                //VecKitReportUtils.getVecKitReportUtils().closeReport();
                                 mHandler.sendEmptyMessage(MSG_CLEAR);
                             }
                         }
@@ -1905,6 +1952,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
                         @Override
                         public void run() {
                             // 拒接
+                            // VecKitReportUtils.getVecKitReportUtils().closeReport();
                             VECKitCalling.endVecCallFromZuoXi("超时拒接");
                             // ChatClient.getInstance().callManager().endVecCall(mZuoXiSendRequestObj.getCallId(), false);
                             //stopForegroundService();
@@ -1917,9 +1965,9 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
                         @Override
                         public void run() {
                             // 获取时间
-                            if (mChronometer != null) {
+                            /*if (mChronometer != null) {
                                 VecConfig.newVecConfig().setVideoCallTimer(mChronometer.getText().toString());
-                            }
+                            }*/
                             clear();
                             stopSelf();
                         }
@@ -2156,6 +2204,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
     }
 
     private void clear() {
+        notifyBlankSpaceActivityFinish();
         mIsFirstAdd = false;
         if (mFloatView != null) {
             mFloatView.clear();
@@ -2168,6 +2217,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
             mVecChatViewUtils = null;
         }
         mIsLine = false;
+        VecKitReportUtils.getVecKitReportUtils().closeReport();
         CloudCallbackUtils.newCloudCallbackUtils().removeICloudCallback();
         AgoraMessage.newAgoraMessage().unRegisterVecPushMessage(getClass().getSimpleName());
         AppStateVecCallback appStateVecCallback = AppStateVecCallback.getAppStateCallback();
@@ -2180,7 +2230,6 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         }
         mPreActiveChatUserName = "";
         mCurrentChatUserName = null;
-        VecConfig.newVecConfig().setIsOnLine(false);
         VecConfig.newVecConfig().setPopupView(false);
 
         mIsStartHalf = false;
@@ -2203,6 +2252,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         mIsStartBoard = false;
         mIsSend = false;
         isSharing = false;
+        mIsClickShare = false;
         closePopupWindow();
         closeMorePopupWindow();
 
@@ -2261,7 +2311,6 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
 
     private void sendIsOnLineState(boolean isOnLine) {
         this.isOnLine = isOnLine;
-        VecConfig.newVecConfig().setIsOnLine(isOnLine);
         Intent intent = new Intent(ChatClient.getInstance().callManager().getIncomingCallBroadcastAction());
         intent.setAction("calling.state");
         intent.putExtra("state", isOnLine);
@@ -2390,6 +2439,9 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
             @Override
             public boolean onPressStateChange(int index, boolean isClick, boolean isCustomState) {
 
+                if (mIconDatas == null || index >= mIconDatas.size()){
+                    return false;
+                }
 
                 // 默认 true 开启
                 if (BottomContainerView.ViewIconData.TYPE_ITEM_VOICE.equalsIgnoreCase(mIconDatas.get(index).getName())) {
@@ -2489,6 +2541,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
                 } else if (BottomContainerView.ViewIconData.TYPE_ITEM_PHONE.equalsIgnoreCase(mIconDatas.get(index).getName())) {
                     // 挂断视频
                     mIsClick = true;
+                    //VecKitReportUtils.getVecKitReportUtils().closeReport();
                     mHandler.sendEmptyMessage(MSG_CALL_END);
                 } else if (BottomContainerView.ViewIconData.TYPE_ITEM_SHARE.equalsIgnoreCase(mIconDatas.get(index).getName())) {
                     // 桌面分享
@@ -3603,14 +3656,14 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         closeDialog();
     }
 
-
     private volatile boolean mIsAppToBackground;
-    // app进入后台，是否允许分享画面
+    // app进入后台，是否允许分享画面 true允许
     private boolean mIsStartShareToBackground = false;
     private boolean mIsRunClickFloatView;
 
     @Override
     public void onAppForeground() {
+        VecKitReportUtils.getVecKitReportUtils().onPageForegroundReport();
         mIsAppToBackground = false;
         if (!mIsAppToBackground && isSharing && !mIsStartShareToBackground){
             if (mAgoraRtcEngine != null && mAgoraRtcEngine.isOpenScreenCapturePaused()){
@@ -3621,6 +3674,12 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
 
     @Override
     public void onAppBackground() {
+        VecKitReportUtils.getVecKitReportUtils().onPageBackgroundReport();
+        if (mIsStartHalf){
+            showFullView();
+        }
+
+        notifyBlankSpaceActivityFinish();
         mIsAppToBackground = true;
         if (mIsAppToBackground && isSharing && !mIsStartShareToBackground){
             if (mAgoraRtcEngine != null && !mAgoraRtcEngine.isOpenScreenCapturePaused()){
@@ -3631,8 +3690,76 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         }
     }
 
+    private void notifyBlankSpaceActivityFinish(){
+        try {
+            BlankSpaceUtils.getBlankSpaceUtils().notifyFinish();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    private boolean mIsClickShare;
+    @Override
+    public void onActivityStopped(Activity activity) {
+
+        if ("BlankSpaceActivity".equalsIgnoreCase(activity.getClass().getSimpleName())
+                && isShowPage() && !mIsClickShare){
+            /*floatViewShow();
+            showFloatView();*/
+
+            // TODO
+            if (!mIsStartHalf){
+                floatViewShow();
+                showFloatView();
+            }
+
+        }else if (!"CallVideoActivity".equalsIgnoreCase(activity.getClass().getSimpleName())
+                && isShowPage() && !mIsClickShare){
+            floatViewShow();
+            showFloatView();
+        }
+
+        mIsClickShare = false;
+    }
+
+    private boolean isShowPage(){
+        return mShowView != null && mShowView.getVisibility() == View.VISIBLE;
+    }
+
+    // 当半屏时，点击缩小按钮时，要恢复全屏
+    private void showFullView(){
+        if (viewById == null){
+            return;
+        }
+        // 全屏
+        viewById.setTag("1");
+
+        mIsStartHalf = false;
+        mCurrentHeight = mHeight;
+        mDrawAndDrawIcon.setText("\ue7c6");
+        bottomMargin(78);
+        updateHeight(mHeight);
+        if (mIsStartBoard) {
+            // 判断电子白板是否全屏
+            if (mFixHeightFrameLayout.isFullScreen()) {
+                showAndHidden(mBottomContainerView, false);
+                showAndHidden(mMembersContainer, false);
+            } else {
+                showAndHidden(mBottomContainerView, true);
+                showAndHidden(mMembersContainer, true);
+            }
+            // 显示电子白板全屏图标
+            showAndHidden(mFullView, true);
+        } else {
+            showAndHidden(mBottomContainerView, true);
+            showAndHidden(mMembersContainer, true);
+        }
+    }
+
     // 点击缩小按钮，显示悬浮按钮
     private void floatViewShow() {
+        // VecKitReportUtils.getVecKitReportUtils().acceptVecVideoBackgroundReport();
+
         mIsRunClickFloatView = true;
         if (mIsAppToBackground && isSharing && !mIsStartShareToBackground){
             if (mAgoraRtcEngine != null && !mAgoraRtcEngine.isOpenScreenCapturePaused()){
@@ -3644,6 +3771,12 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
 
     // 点击悬浮按钮，显示视频页面
     private void floatViewHidden() {
+        Log.e("ppppppppppppp","mIsStartHalf = "+mIsStartHalf);
+        if (!mIsStartHalf || mIsAppToBackground){
+            BlankSpaceActivity.startBlankSpaceActivity(getApplicationContext());
+        }
+
+        // VecKitReportUtils.getVecKitReportUtils().acceptVecVideoForegroundReport();
         mIsRunClickFloatView = false;
         if (isSharing && !mIsStartShareToBackground){
             if (mAgoraRtcEngine != null && mAgoraRtcEngine.isOpenScreenCapturePaused()){
@@ -3662,6 +3795,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
     }
 
     private void endCallFromOn() {
+        // VecKitReportUtils.getVecKitReportUtils().closeReport();
         mHandler.sendEmptyMessage(MSG_CLEAR);
         if (mIsRetry) {
             CallVideoActivity.startDialogTypeEnd(getApplicationContext(), mPreActiveChatUserName);

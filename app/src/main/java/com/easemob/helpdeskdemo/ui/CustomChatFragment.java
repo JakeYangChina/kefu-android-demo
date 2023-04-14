@@ -284,7 +284,7 @@ public class CustomChatFragment extends ChatFragment implements ChatFragment.Eas
         //增加扩展的item
         inputMenu.registerExtendMenuItem(R.string.attach_location, R.drawable.hd_chat_location_selector, ITEM_MAP, R.id.chat_menu_map, extendMenuItemClickListener);
         inputMenu.registerExtendMenuItem(R.string.leave_title, R.drawable.em_chat_phrase_selector, ITEM_LEAVE_MSG, R.id.chat_menu_leave_msg, extendMenuItemClickListener);
-        if (VecConfig.newVecConfig().isOldVideoEnable()){
+        if (VecConfig.newVecConfig().isEnableCecVideo()){
             inputMenu.registerExtendMenuItem(R.string.attach_call_video, R.drawable.em_chat_video_selector, ITEM_VIDEO, R.id.chat_menu_video_call, extendMenuItemClickListener);
         }
 
