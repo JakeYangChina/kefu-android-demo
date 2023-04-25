@@ -16,6 +16,7 @@ import com.easemob.helpdeskdemo.receiver.CallReceiver;
 import com.easemob.helpdeskdemo.ui.ChatActivity;
 import com.easemob.helpdeskdemo.utils.ListenerManager;
 import com.heytap.msp.push.HeytapPushManager;
+import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
 import com.hyphenate.chat.ChatManager;
 import com.hyphenate.chat.Conversation;

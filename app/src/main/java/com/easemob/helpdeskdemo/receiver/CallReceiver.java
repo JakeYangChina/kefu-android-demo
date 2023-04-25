@@ -25,6 +25,7 @@ public class CallReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (!ChatClient.getInstance().isLoggedInBefore()){
+            mIsOnLine = false;
             return;
         }
         String action = intent.getAction();

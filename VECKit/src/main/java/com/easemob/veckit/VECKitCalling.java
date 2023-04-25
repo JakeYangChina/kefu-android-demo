@@ -1,11 +1,9 @@
 package com.easemob.veckit;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.widget.Toast;
@@ -13,6 +11,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 
 import com.easemob.veckit.utils.Utils;
+import com.easemob.veckit.utils.VecKitOptions;
 import com.hyphenate.agora.FunctionIconItem;
 import com.hyphenate.agora.ZuoXiSendRequestObj;
 import com.hyphenate.chat.AgoraMessage;
@@ -23,16 +22,12 @@ import com.hyphenate.chat.Message;
 import com.hyphenate.chat.VecConfig;
 import com.hyphenate.helpdesk.callback.ValueCallBack;
 import com.hyphenate.helpdesk.easeui.util.FlatFunctionUtils;
-import com.hyphenate.helpdesk.util.Log;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.List;
 
-import static com.easemob.veckit.CallVideoActivity.CONFIG_ID_KEY;
-import static com.easemob.veckit.CallVideoActivity.startDialogTypeEnd;
 
 public class VECKitCalling extends Activity {
 
@@ -56,10 +51,11 @@ public class VECKitCalling extends Activity {
      * @param relatedImServiceNumber 会话IM服务号
      */
     public static void callingRequest(Context context, String vecImServiceNumber, String configId, String guideSessionId, String visitorUserId, String relatedImServiceNumber){
-        saveGuideSessionId(context, guideSessionId);
-        saveGuideVisitorUserId(context, visitorUserId);
-        saveGuideImServiceNumber(context, relatedImServiceNumber);
-        ChatClient.getInstance().changeConfigId(configId);
+        VecKitOptions.getVecKitOptions().setGuideConfigId(configId);
+        VecKitOptions.getVecKitOptions().setGuideSessionId(guideSessionId);
+        VecKitOptions.getVecKitOptions().setGuideVisitorUserId(visitorUserId);
+        VecKitOptions.getVecKitOptions().setRelatedImServiceNumber(relatedImServiceNumber);
+
         Intent intent = new Intent(context, VECKitCalling.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(VideoCallWindowService.CURRENT_CHAT_USER_NAME, vecImServiceNumber);
@@ -161,7 +157,6 @@ public class VECKitCalling extends Activity {
             public void run() {
                 String tenantId = ChatClient.getInstance().tenantId();// "77556"
                 String configId = getConfigId();
-
                 if (TextUtils.isEmpty(configId)){
                     mDialog.dismiss();
                     Toast.makeText(VECKitCalling.this, Utils.getString(getApplicationContext(), R.string.vec_config_setting), Toast.LENGTH_LONG).show();
@@ -392,78 +387,23 @@ public class VECKitCalling extends Activity {
     }
 
     private String getConfigId(){
-        SharedPreferences sharedPreferences = getSharedPreferences("video_style", MODE_PRIVATE);
-        String configId = ChatClient.getInstance().getConfigId();
-        if (TextUtils.isEmpty(configId)){
-            if (sharedPreferences != null){
-                configId = sharedPreferences.getString(String.format(CONFIG_ID_KEY, mToChatUserName),"");
-            }
-        }else {
-            // 保存本地
-            // CONFIG_ID_KEY
-            if (sharedPreferences != null){
-                SharedPreferences.Editor edit = sharedPreferences.edit();
-                edit.putString(String.format(CONFIG_ID_KEY, mToChatUserName), configId);
-                edit.apply();
-            }
+        String relatedImServiceNumber = VecKitOptions.getVecKitOptions().getRelatedImServiceNumber();
+        if (!TextUtils.isEmpty(relatedImServiceNumber)){
+            return VecKitOptions.getVecKitOptions().getGuideConfigId();
         }
-        return configId;
+        return ChatClient.getInstance().getConfigId();
     }
 
-
-    @SuppressLint("ApplySharedPref")
-    private static void saveGuideSessionId(Context context, String guideSessionId){
-        if (context != null){
-            SharedPreferences sharedPreferences = context.getSharedPreferences("video_style", MODE_PRIVATE);
-            SharedPreferences.Editor edit = sharedPreferences.edit();
-            edit.putString("guide_session_id", guideSessionId);
-            edit.commit();
-        }
+    public static String getGuideSessionId(){
+        return VecKitOptions.getVecKitOptions().getGuideSessionId();
     }
 
-    public static String getGuideSessionId(Context context){
-        if (context != null){
-            SharedPreferences sharedPreferences = context.getSharedPreferences("video_style", MODE_PRIVATE);
-            return sharedPreferences.getString("guide_session_id","");
-        }
-        return "";
+    public static String getGuideImServiceNumber(){
+        return VecKitOptions.getVecKitOptions().getRelatedImServiceNumber();
     }
 
-    @SuppressLint("ApplySharedPref")
-    private static void saveGuideImServiceNumber(Context context, String relatedImServiceNumber){
-        if (context != null){
-            SharedPreferences sharedPreferences = context.getSharedPreferences("video_style", MODE_PRIVATE);
-            SharedPreferences.Editor edit = sharedPreferences.edit();
-            edit.putString("guide_imServiceNumber", relatedImServiceNumber);
-            edit.commit();
-        }
-    }
-
-    public static String getGuideImServiceNumber(Context context){
-        if (context != null){
-            SharedPreferences sharedPreferences = context.getSharedPreferences("video_style", MODE_PRIVATE);
-            return sharedPreferences.getString("guide_imServiceNumber","");
-        }
-        return "";
-    }
-
-
-    @SuppressLint("ApplySharedPref")
-    private static void saveGuideVisitorUserId(Context context, String guideSessionId){
-        if (context != null){
-            SharedPreferences sharedPreferences = context.getSharedPreferences("video_style", MODE_PRIVATE);
-            SharedPreferences.Editor edit = sharedPreferences.edit();
-            edit.putString("guide_visitor_user_id", guideSessionId);
-            edit.commit();
-        }
-    }
-
-    public static String getVisitorUserId(Context context){
-        if (context != null){
-            SharedPreferences sharedPreferences = context.getSharedPreferences("video_style", MODE_PRIVATE);
-            return sharedPreferences.getString("guide_visitor_user_id","");
-        }
-        return "";
+    public static String getVisitorUserId(){
+        return VecKitOptions.getVecKitOptions().getGuideVisitorUserId();
     }
 
 }

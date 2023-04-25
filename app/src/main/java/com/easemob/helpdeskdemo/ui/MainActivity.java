@@ -20,6 +20,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Point;
 import android.net.Uri;
+import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -33,6 +34,10 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.webkit.SslErrorHandler;
+import android.webkit.WebChromeClient;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;

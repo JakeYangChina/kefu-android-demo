@@ -37,6 +37,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
+import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -253,8 +254,8 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.e("oooooooooooo","onCreate");
         if (!FloatWindowManager.getInstance().checkPermission(this)) {
+            BlankSpaceUtils.getBlankSpaceUtils().setVecVideoFinish(true);
             mIsBack = true;
             stopSelf();
         } else {
@@ -264,7 +265,9 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
             AppStateVecCallback appStateVecCallback = AppStateVecCallback.getAppStateCallback();
             if (appStateVecCallback != null){
                 appStateVecCallback.registerIAppStateVecCallback(this);
+                BlankSpaceUtils.getBlankSpaceUtils().setVecVideoFinish(false);
             }else{
+                BlankSpaceUtils.getBlankSpaceUtils().setVecVideoFinish(true);
                 mIsBack = true;
                 stopSelf();
                 throw new RuntimeException("需要先初始化AppStateCallback类， 应在 Application 里调用 AppStateCallback.init(this)方法！！！");
@@ -536,9 +539,12 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
             @Override
             public void onClick(View v) {
                 // 显示悬浮按钮
-                Log.e("ppppppppppppp","点击最小按钮");
-
+                Log.e(TAG,"点击最小按钮");
+                Log.e("VecKitReportDataUtils","点击最小按钮 mIsAppToBackground ="+mIsAppToBackground);
                 notifyBlankSpaceActivityFinish();
+                if (mIsAppToBackground){
+                    VecKitReportUtils.getVecKitReportUtils().onPageBackgroundReport();
+                }
                 floatViewShow();
                 showFloatView();
             }
@@ -547,7 +553,9 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         mFloatView.setOnAVCallFloatViewCallback(new AVCallFloatView.OnAVCallFloatViewCallback() {
             @Override
             public void onClick() {
-                Log.e("ppppppppppppp","点击显示视图");
+                Log.e(TAG,"点击显示视图 进入前台");
+                Log.e("VecKitReportDataUtils","点击显示视图 进入前台");
+                VecKitReportUtils.getVecKitReportUtils().onPageForegroundReport();
                 showFullView();
                 floatViewHidden();
                 showView();
@@ -606,6 +614,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
         ViewOnClickUtils.onClick(ivAccept, new ViewOnClickUtils.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.e("ooooooooooooo","接通");
                 mBottomContainer.setVisibility(View.GONE);
                 mBottomContainerView.setVisibility(View.VISIBLE);
                 mIsClick = true;
@@ -2205,6 +2214,7 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
 
     private void clear() {
         notifyBlankSpaceActivityFinish();
+        BlankSpaceUtils.getBlankSpaceUtils().setVecVideoFinish(true);
         mIsFirstAdd = false;
         if (mFloatView != null) {
             mFloatView.clear();
@@ -3771,7 +3781,6 @@ public class VideoCallWindowService extends Service implements IVecMessageNotify
 
     // 点击悬浮按钮，显示视频页面
     private void floatViewHidden() {
-        Log.e("ppppppppppppp","mIsStartHalf = "+mIsStartHalf);
         if (!mIsStartHalf || mIsAppToBackground){
             BlankSpaceActivity.startBlankSpaceActivity(getApplicationContext());
         }

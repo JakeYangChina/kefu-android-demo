@@ -10,7 +10,8 @@
         android:theme="@style/AppTheme">
         <!-- 视频通话 -->
         <activity android:name=".ui.CallActivity"
-            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:configChanges=
+                "screenSize|smallestScreenSize|screenLayout|orientation"
             android:screenOrientation="portrait"
             android:launchMode="singleTask"
             android:theme="@style/horizontal_slide_no_anim" />

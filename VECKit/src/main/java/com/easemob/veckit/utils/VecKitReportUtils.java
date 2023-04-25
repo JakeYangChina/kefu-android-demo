@@ -38,6 +38,7 @@ public class VecKitReportUtils {
     private volatile String mVecImServiceNumber;
     public void startReport(String vecImServiceNumber){
         try{
+            Log.e(TAG,"VecConfig.newVecConfig().isEnableReport() = "+VecConfig.newVecConfig().isEnableReport());
             if (!VecConfig.newVecConfig().isEnableReport()){
                 Log.e(TAG,"isEnableReport = false");
                 ChatClient.getInstance().chatManager().asyncGetEnableReport(ChatClient.getInstance().tenantId(), new ValueCallBack<Boolean>() {
@@ -77,11 +78,13 @@ public class VecKitReportUtils {
 
 
     private void start(String vecImServiceNumber){
+        Log.e(TAG,"vec report start mIsStart = "+mIsStart);
         if (mIsStart){
             return;
         }
         this.mVecImServiceNumber = vecImServiceNumber;
         EMLog.e(TAG,"vec startReport mVecImServiceNumber = "+mVecImServiceNumber);
+        Log.e("VecKitReportDataUtils","vec startReport mVecImServiceNumber = "+mVecImServiceNumber);
         try{
             mTime = ChatClient.getInstance().getReportTimer();
         }catch (Exception e){
@@ -91,6 +94,7 @@ public class VecKitReportUtils {
         mIsStart = true;
         mIsNeedReport = true;
         mExecutorService.execute(() -> {
+            Log.e("VecKitReportDataUtils","vec startReport 执行线程 mVecImServiceNumber = "+mVecImServiceNumber+", mIsStart = "+mIsStart);
             while (mIsStart){
                 // 调用接口
                 sendReport();
@@ -105,6 +109,7 @@ public class VecKitReportUtils {
 
 
     public void closeReport(){
+        Log.e(TAG,"vec closeReport");
         mIsStart = false;
         mIsNeedReport = false;
         sendVecOfflineReport();
@@ -113,15 +118,19 @@ public class VecKitReportUtils {
     private volatile boolean mIsNeedReport;
     // 前台上报
     public void onPageForegroundReport(){
+        Log.e(TAG,"vec onPageForegroundReport mIsNeedReport = "+mIsNeedReport);
         if (mIsNeedReport && !mIsStart){
+            Log.e(TAG,"vec onPageForegroundReport mIsNeedReport = "+mIsNeedReport+", mIsStart = "+mIsStart);
             startReport(mVecImServiceNumber);
         }
     }
 
     // 后台上报
     public void onPageBackgroundReport(){
+        Log.e(TAG,"vec onPageBackgroundReport mIsNeedReport = "+mIsNeedReport);
         if (mIsNeedReport){
             mIsStart = false;
+            Log.e(TAG,"vec onPageBackgroundReport mIsNeedReport = "+mIsNeedReport+", mIsStart = "+mIsStart);
             sendVecOfflineReport();
         }
     }
@@ -140,7 +149,7 @@ public class VecKitReportUtils {
 
 
     private void sendReport(){
-        Log.e(TAG,"vec 调用接口上报");
+        Log.e(TAG,"vec sendReport");
         ChatClient.getInstance().chatManager().sendVecReport(mVecImServiceNumber);
     }
 

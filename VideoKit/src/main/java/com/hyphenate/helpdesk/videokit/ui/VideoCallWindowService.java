@@ -53,6 +53,7 @@ import com.hyphenate.chat.AgoraMessage;
 import com.hyphenate.chat.ChatClient;
 import com.hyphenate.chat.VecConfig;
 import com.hyphenate.helpdesk.callback.ValueCallBack;
+import com.hyphenate.helpdesk.easeui.util.EaseUiReportUtils;
 import com.hyphenate.helpdesk.easeui.util.FlatFunctionUtils;
 import com.hyphenate.helpdesk.videokit.R;
 import com.hyphenate.helpdesk.videokit.agora.AgoraRtcEngine;

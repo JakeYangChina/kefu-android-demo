@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
@@ -31,14 +32,31 @@ public class BlankSpaceActivity extends Activity implements BlankSpaceUtils.IBla
 
         try{
             BlankSpaceUtils.getBlankSpaceUtils().setIBlankSpace(this);
+            // 如果视频页面已经不存在了，需要关闭
+            if (BlankSpaceUtils.getBlankSpaceUtils().isVecVideoFinish()){
+                BlankSpaceUtils.getBlankSpaceUtils().clear();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Log.e("ooooooooooo","finish");
+                        finish();
+                    }
+                });
+            }
         }catch (Exception e){
             e.printStackTrace();
         }
+
     }
 
     @Override
     public void pageFinish() {
-        finish();
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                finish();
+            }
+        });
     }
 
     @Override

@@ -111,6 +111,7 @@
         <!-- 主界面 -->
         <activity
             android:name="com.easemob.helpdeskdemo.ui.MainActivity"
+            android:launchMode="singleTask"
             android:screenOrientation="portrait"
             android:theme="@style/horizontal_slide"
             android:windowSoftInputMode="adjustPan"/>
