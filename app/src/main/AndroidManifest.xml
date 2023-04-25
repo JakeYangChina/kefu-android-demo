@@ -3,8 +3,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.easemob.helpdeskdemo">
 
-    <!--精准闹钟-->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <!-- 悬浮窗所需权限 -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />

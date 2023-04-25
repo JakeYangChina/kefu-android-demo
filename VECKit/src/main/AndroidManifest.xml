@@ -4,8 +4,6 @@
     <!-- 悬浮窗所需权限 -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.VIBRATE"/>
-    <!--精准闹钟-->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <application>
         <!--android:screenOrientation="portrait"-->
         <activity android:name=".CallVideoActivity"
